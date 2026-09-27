@@ -12,12 +12,12 @@ class RegisterSchema(Schema):
     role = fields.Str(required=False, load_default="STUDENT", validate=validate.OneOf(UserRole.list()))
 
     @validates("email")
-    def validate_email(self, value):
+    def validate_email(self, value, **kwargs):
         if not value or not value.strip():
             raise ValidationError("Email is required")
 
     @validates("password")
-    def validate_password(self, value):
+    def validate_password(self, value, **kwargs):
         if not value or not value.strip():
             raise ValidationError("Password is required")
 
@@ -28,12 +28,12 @@ class LoginSchema(Schema):
     password = fields.Str(required=True)
 
     @validates("email")
-    def validate_email(self, value):
+    def validate_email(self, value, **kwargs):
         if not value or not value.strip():
             raise ValidationError("Email is required")
 
     @validates("password")
-    def validate_password(self, value):
+    def validate_password(self, value, **kwargs):
         if not value:
             raise ValidationError("Password is required")
 

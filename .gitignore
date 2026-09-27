@@ -21,6 +21,16 @@ env/
 *.sqlite
 *.sqlite3
 
+# Uploaded/generated files
+backend/app/uploads/*
+backend/uploads/*
+backend/test_resume.docx
+
+# Test/cache
+.pytest_cache/
+.coverage
+htmlcov/
+
 # IDE
 .vscode/
 .idea/
@@ -28,11 +38,6 @@ env/
 # OS
 .DS_Store
 Thumbs.db
-
-# Test/cache
-.pytest_cache/
-.coverage
-htmlcov/
 
 # Build/package
 build/

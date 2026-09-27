@@ -42,12 +42,12 @@ def register_jwt_callbacks(jwt_manager):
 
     @jwt_manager.user_identity_loader
     def user_identity_lookup(user):
-        return user.id
+        return str(user.id)
 
     @jwt_manager.user_lookup_loader
     def user_lookup_callback(_jwt_header, jwt_data):
         identity = jwt_data["sub"]
-        return User.query.filter_by(id=identity, is_active=True).one_or_none()
+        return User.query.filter_by(id=int(identity), is_active=True).one_or_none()
 
     @jwt_manager.expired_token_loader
     def expired_token_callback(jwt_header, jwt_payload):
@@ -90,6 +90,24 @@ def register_blueprints(app):
     """Register all blueprints."""
     from app.routes.auth_routes import auth_bp
     from app.routes.test_routes import test_bp
+    from app.routes.student_routes import student_bp
+    from app.routes.skill_routes import skills_bp
+    from app.routes.student_skill_routes import student_skills_bp
+    from app.routes.project_routes import projects_bp
+    from app.routes.certification_routes import certifications_bp
+    from app.routes.experience_routes import experiences_bp
+    from app.routes.internship_routes import internships_bp
+    from app.routes.skill_evidence_routes import skill_evidence_bp
+    from app.routes.resume_routes import resumes_bp
 
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
     app.register_blueprint(test_bp, url_prefix="/api/test")
+    app.register_blueprint(student_bp, url_prefix="/api/students")
+    app.register_blueprint(skills_bp, url_prefix="/api")
+    app.register_blueprint(student_skills_bp, url_prefix="/api")
+    app.register_blueprint(projects_bp, url_prefix="/api")
+    app.register_blueprint(certifications_bp, url_prefix="/api")
+    app.register_blueprint(experiences_bp, url_prefix="/api")
+    app.register_blueprint(internships_bp, url_prefix="/api")
+    app.register_blueprint(skill_evidence_bp, url_prefix="/api")
+    app.register_blueprint(resumes_bp, url_prefix="/api")
