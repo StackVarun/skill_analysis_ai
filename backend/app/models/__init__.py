@@ -10,5 +10,7 @@ from app.models.experience import Experience, EmploymentType, experience_skills
 from app.models.internship import Internship, InternshipType, InternshipStatus, internship_skills
 from app.models.skill_evidence import SkillEvidence, EvidenceType, VerificationStatus
 from app.models.resume import Resume, ResumeStatus, UPLOAD_FOLDER, ALLOWED_EXTENSIONS, MAX_FILE_SIZE
+from app.models.assessment import Assessment, AssessmentQuestion, AssessmentAttempt, AssessmentAnswer
+from app.models.role import Role, RoleSkillRequirement
 
-__all__ = ["UserRole", "User", "StudentProfile", "Skill", "StudentSkill", "ProficiencyLevel", "Project", "project_skills", "Certification", "Experience", "EmploymentType", "experience_skills", "Internship", "InternshipType", "InternshipStatus", "internship_skills", "SkillEvidence", "EvidenceType", "VerificationStatus", "Resume", "ResumeStatus", "UPLOAD_FOLDER", "ALLOWED_EXTENSIONS", "MAX_FILE_SIZE"]
+__all__ = ["UserRole", "User", "StudentProfile", "Skill", "StudentSkill", "ProficiencyLevel", "Project", "project_skills", "Certification", "Experience", "EmploymentType", "experience_skills", "Internship", "InternshipType", "InternshipStatus", "internship_skills", "SkillEvidence", "EvidenceType", "VerificationStatus", "Resume", "ResumeStatus", "UPLOAD_FOLDER", "ALLOWED_EXTENSIONS", "MAX_FILE_SIZE", "Assessment", "AssessmentQuestion", "AssessmentAttempt", "AssessmentAnswer", "Role", "RoleSkillRequirement"]

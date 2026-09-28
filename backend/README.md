@@ -212,3 +212,11 @@ Run tests:
 ```bash
 pytest
 ```
+
+## Phase 3 Skill Intelligence
+
+Protected endpoints expose assessments, skill scores, role requirements, role matches, skill gaps, and rule based learning recommendations under `/api`. Assessment and role authoring require an authenticated industry, academician, or institution account for assessments and an institution account for roles. Student analysis and assessment attempts are scoped to the authenticated student's profile.
+
+Assessment score is `correct answers / total questions * 100`. Skill proficiency uses the mean assessment score blended with the existing self reported proficiency level at 70% and 30%; when only one source exists, that source is used. Evidence score adds configured evidence type weights adjusted by evidence strength, applies a configurable multiplier to verified evidence, then caps the result at 100. Overall skill score is the normalized weighted mean of proficiency and evidence (defaults 60% / 40%). Role match is the weighted mean of each required skill's overall score. Gap is `max(0, required score - overall skill score)`, classified at configurable minor and moderate thresholds. Recommendations use configurable topic lists in `app/services/skill_intelligence_service.py` and sort missing/large gaps first.
+
+Tune scoring and gap thresholds with `SKILL_PROFICIENCY_WEIGHT`, `SKILL_EVIDENCE_WEIGHT`, `SKILL_EVIDENCE_VERIFIED_MULTIPLIER`, and the `Config` values in `config.py`. Apply the schema migration with `flask db upgrade`. An institution user can seed the five sample roles with `POST /api/roles/seed`.
