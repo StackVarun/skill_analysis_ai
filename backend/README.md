@@ -220,3 +220,22 @@ Protected endpoints expose assessments, skill scores, role requirements, role ma
 Assessment score is `correct answers / total questions * 100`. Skill proficiency uses the mean assessment score blended with the existing self reported proficiency level at 70% and 30%; when only one source exists, that source is used. Evidence score adds configured evidence type weights adjusted by evidence strength, applies a configurable multiplier to verified evidence, then caps the result at 100. Overall skill score is the normalized weighted mean of proficiency and evidence (defaults 60% / 40%). Role match is the weighted mean of each required skill's overall score. Gap is `max(0, required score - overall skill score)`, classified at configurable minor and moderate thresholds. Recommendations use configurable topic lists in `app/services/skill_intelligence_service.py` and sort missing/large gaps first.
 
 Tune scoring and gap thresholds with `SKILL_PROFICIENCY_WEIGHT`, `SKILL_EVIDENCE_WEIGHT`, `SKILL_EVIDENCE_VERIFIED_MULTIPLIER`, and the `Config` values in `config.py`. Apply the schema migration with `flask db upgrade`. An institution user can seed the five sample roles with `POST /api/roles/seed`.
+
+## Phase 4A Optional Local AI
+
+Phase 4A adds four authenticated student endpoints:
+
+- `POST /api/ai/resume-skills/extract` with `{ "resume_id": 1 }`
+- `POST /api/ai/skills/normalize` with `{ "variant": "JS" }`
+- `POST /api/ai/skill-gaps/explain` with `{ "role_id": 1 }`
+- `POST /api/ai/learning-roadmap` with `{ "role_id": 1 }`
+
+The route layer calls `LocalAIService`, which uses a replaceable `OllamaAdapter`. The adapter calls Ollama's local `127.0.0.1:11434` HTTP API using Python's standard library; no model package, external AI API, or API key is required by the backend. The default model is `qwen2.5:1.5b-instruct-q5_0` (about 1.1 GB). To enable generation on Windows, install Ollama from [ollama.com/download/windows](https://ollama.com/download/windows), then run:
+
+```powershell
+ollama run qwen2.5:1.5b-instruct-q5_0
+```
+
+Set `LOCAL_AI_BASE_URL`, `LOCAL_AI_MODEL`, and `LOCAL_AI_TIMEOUT_SECONDS` in the environment to change the local server, model, or timeout. Flask startup never loads or requires the model. If the runtime/model is missing, fails, times out, returns malformed output, or returns output that fails validation, the endpoint reports `status: "fallback"` and provides a deterministic catalog/Phase 3 based result when possible.
+
+Resume extraction only returns catalog skills supported by source text, labels them as unverified suggestions, and never writes them to student skills. Normalization suggestions must resolve to an existing skill. Gap explanations and roadmaps consume the Phase 3 result; the service preserves the numeric scores, gaps, and role match and does not ask the model to compute them. Unit and API tests mock the adapter and do not download a model.

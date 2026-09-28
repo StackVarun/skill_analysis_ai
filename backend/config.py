@@ -35,6 +35,10 @@ class Config:
     SKILL_GAP_MINOR_MAX = 10
     SKILL_GAP_MODERATE_MAX = 25
     ROLE_DEFAULT_REQUIRED_PROFICIENCY = 70
+    LOCAL_AI_BASE_URL = os.environ.get("LOCAL_AI_BASE_URL", "http://127.0.0.1:11434")
+    LOCAL_AI_MODEL = os.environ.get("LOCAL_AI_MODEL", "qwen2.5:1.5b-instruct-q5_0")
+    LOCAL_AI_TIMEOUT_SECONDS = float(os.environ.get("LOCAL_AI_TIMEOUT_SECONDS", "60"))
+    LOCAL_AI_MAX_INPUT_CHARS = int(os.environ.get("LOCAL_AI_MAX_INPUT_CHARS", "12000"))
 
 
 class DevelopmentConfig(Config):
