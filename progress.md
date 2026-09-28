@@ -1,444 +1,284 @@
-# SkillBridge AI — Progress
+# Phase 3 â€” Skill Intelligence Engine
 
-## Project
+## Objective
 
-**SkillBridge AI** — Portal for Academia–Industry Collaboration for Skill Mapping, Internships, and Placement.
-
-The system connects:
-
-**Skills → Skill Assessment → Skill Gaps → Learning → Internships → Placement**
-
----
-
-# Current Phase
-
-## Phase 2 — Student Profile, Skills & Evidence
-
-Phase 1 has been completed and committed.
-
-The current task is to implement Phase 2 only.
-
-Do not redo or rewrite completed Phase 1 functionality unless a genuine bug or dependency requires a small change.
-
----
-
-# Completed
-
-## Phase 1 — Backend Foundation
-
-* [x] Flask backend foundation
-* [x] REST API structure
-* [x] SQLite database
-* [x] SQLAlchemy integration
-* [x] Database migrations setup
-* [x] JWT authentication
-* [x] User model
-* [x] Role definitions
-* [x] Role-based access control
-* [x] Authentication routes
-* [x] Authentication service
-* [x] Authentication schemas
-* [x] Basic authorization decorators
-* [x] Configuration structure
-* [x] Environment-variable support
-* [x] Basic error handling
-* [x] Backend tests
-* [x] Basic server startup verification
-
-### User Roles
-
-The system supports:
-
-* `STUDENT`
-* `INDUSTRY`
-* `ACADEMICIAN`
-* `INSTITUTION`
-
----
-
-# Phase 2 Requirements
-
-## 1. Student Profile
-
-Create the student profile functionality.
-
-A student profile should support information such as:
-
-* Full name
-* Email
-* Phone
-* Institution
-* Degree
-* Branch / specialization
-* Graduation year
-* CGPA
-* Bio / summary
-* Location
-* LinkedIn URL
-* GitHub URL
-* Portfolio URL
-
-Requirements:
-
-* Create appropriate SQLAlchemy models.
-* Associate the student profile with the authenticated user.
-* Ensure a student can access and update only their own profile.
-* Add validation for profile fields.
-* Implement REST APIs.
-* Use proper HTTP status codes.
-* Add tests.
-
-Suggested endpoints:
-
-* `GET /api/students/profile`
-* `PUT /api/students/profile`
-
-Do not expose sensitive authentication information through the profile API.
-
----
-
-# 2. Skills
-
-Create a reusable skill system.
-
-A skill should contain information such as:
-
-* Skill name
-* Category
-* Description
-
-Examples:
+Build a deterministic Skill Intelligence Engine using only:
 
 * Python
-* Java
-* JavaScript
-* React
 * Flask
-* SQL
-* PostgreSQL
-* Machine Learning
-* Data Structures
-* Algorithms
+* SQLAlchemy
+* SQLite
+* Existing Phase 2 student data
 
-Skills should be reusable across students and future job/internship roles.
+No AI models or external AI APIs are required.
 
-Requirements:
+The system should convert student data into:
 
-* Create a `Skill` SQLAlchemy model.
-* Prevent accidental duplicate skills.
-* Add appropriate relationships.
-* Implement skill APIs.
-* Validate skill names.
-* Support searching/filtering skills where useful.
-
-Suggested endpoints:
-
-* `GET /api/skills`
-* `GET /api/skills/<id>`
-* `POST /api/skills`
-
-Industry/institution-specific skill creation can be restricted by role if appropriate.
+**Assessment â†’ Proficiency â†’ Evidence â†’ Skill Score â†’ Skill Gaps â†’ Role Matching â†’ Recommendations**
 
 ---
 
-# 3. Student Skills
+## 1. Skill Assessment
 
-Create the relationship between students and skills.
+Implement:
 
-A student should be able to associate multiple skills with their profile.
+* Assessment
+* Assessment questions
+* Student attempts
+* Student answers
+* Assessment results
+* Skill-wise scores
 
-The relationship should support information such as:
+Assessment scoring must be deterministic.
 
-* Student
-* Skill
-* Self-assessed proficiency
-* Optional years/months of experience
-* Source of skill
-* Date added/updated
+Normalize scores to a 0â€“100 range.
 
-Suggested proficiency levels:
+Example:
 
-* BEGINNER
-* INTERMEDIATE
-* ADVANCED
-* EXPERT
-
-Requirements:
-
-* Create an appropriate association model.
-* Prevent duplicate student-skill relationships.
-* Allow students to add skills.
-* Allow students to update proficiency.
-* Allow students to remove skills.
-* Ensure authorization is enforced.
-
-Suggested endpoints:
-
-* `GET /api/students/skills`
-* `POST /api/students/skills`
-* `PUT /api/students/skills/<skill_id>`
-* `DELETE /api/students/skills/<skill_id>`
+```text
+Correct answers / Total questions Ã— 100
+```
 
 ---
 
-# 4. Projects
+## 2. Proficiency Score
 
-Create a project section for student profiles.
+Create a centralized proficiency calculation service.
 
-A project should support:
+Use existing StudentSkill data and assessment results.
 
-* Project title
-* Description
-* Technologies used
-* Project URL
-* GitHub URL
-* Start date
-* End date
-* Role/contribution
-* Associated skills
+Keep the calculation deterministic and explainable.
 
-Requirements:
-
-* Create SQLAlchemy model.
-* Associate projects with students.
-* Allow students to create, update, view, and delete their own projects.
-* Validate ownership.
-* Allow projects to reference skills where appropriate.
-* Implement REST APIs.
-* Add tests.
-
-Suggested endpoints:
-
-* `GET /api/students/projects`
-* `POST /api/students/projects`
-* `GET /api/students/projects/<id>`
-* `PUT /api/students/projects/<id>`
-* `DELETE /api/students/projects/<id>`
+Do not use AI or ML.
 
 ---
 
-# 5. Certifications
+## 3. Evidence Score
 
-Create certification management for students.
-
-A certification should support:
-
-* Certification name
-* Issuing organization
-* Issue date
-* Expiry date if applicable
-* Credential ID
-* Credential URL
-* Description
-
-Requirements:
-
-* Associate certifications with students.
-* Students can create, update, view, and delete their own certifications.
-* Validate ownership.
-* Implement REST APIs.
-* Add tests.
-
-Suggested endpoints:
-
-* `GET /api/students/certifications`
-* `POST /api/students/certifications`
-* `GET /api/students/certifications/<id>`
-* `PUT /api/students/certifications/<id>`
-* `DELETE /api/students/certifications/<id>`
-
----
-
-# 6. Experience
-
-Create student experience functionality.
-
-Experience should support:
-
-* Organization/company
-* Job title
-* Employment type
-* Location
-* Start date
-* End date
-* Description
-* Skills used
-
-Employment types may include:
-
-* INTERNSHIP
-* FULL_TIME
-* PART_TIME
-* FREELANCE
-* OTHER
-
-Requirements:
-
-* Associate experience with students.
-* Support CRUD operations.
-* Validate dates.
-* Allow associated skills.
-* Enforce ownership.
-* Add REST APIs and tests.
-
-Suggested endpoints:
-
-* `GET /api/students/experience`
-* `POST /api/students/experience`
-* `GET /api/students/experience/<id>`
-* `PUT /api/students/experience/<id>`
-* `DELETE /api/students/experience/<id>`
-
----
-
-# 7. Internship History
-
-Track internships separately where useful for placement analytics.
-
-An internship record should support:
-
-* Organization
-* Role
-* Start date
-* End date
-* Description
-* Skills gained
-* Certificate/credential URL
-* Internship type
-* Status
-
-Requirements:
-
-* Associate internships with students.
-* Support CRUD operations.
-* Associate relevant skills.
-* Enforce ownership.
-* Add validation.
-* Add tests.
-
-Suggested endpoints:
-
-* `GET /api/students/internships`
-* `POST /api/students/internships`
-* `GET /api/students/internships/<id>`
-* `PUT /api/students/internships/<id>`
-* `DELETE /api/students/internships/<id>`
-
----
-
-# 8. Skill Evidence
-
-Create a system for recording evidence that supports a student's claimed skills.
-
-Evidence can come from:
+Use existing:
 
 * Projects
 * Certifications
-* Internships
 * Experience
-* Assessments
-* Coursework
-* Other verified sources
+* Internships
+* Skill Evidence
+* Resume-derived structured information where available
 
-A skill evidence record should support:
+Assign configurable weights to evidence types.
 
-* Student
-* Skill
-* Evidence type
-* Evidence title
+Example:
+
+```text
+Project       â†’ 25
+Certification â†’ 20
+Experience    â†’ 30
+Internship    â†’ 30
+Verified evidence â†’ additional weight where appropriate
+```
+
+Keep all weights centralized.
+
+Do not invent evidence.
+
+---
+
+## 4. Overall Skill Score
+
+Calculate an overall skill score from structured information.
+
+Initial formula:
+
+```text
+60% Ã— Proficiency
+40% Ã— Evidence Strength
+```
+
+Keep the weights configurable.
+
+Return:
+
+```json
+{
+  "skill": "Python",
+  "proficiency_score": 80,
+  "evidence_score": 70,
+  "overall_score": 76
+}
+```
+
+All calculations must be deterministic.
+
+---
+
+## 5. Target Roles
+
+Create a role system.
+
+A role should contain:
+
+* Role name
 * Description
-* Source/reference URL if available
-* Related project/certification/experience/internship where applicable
-* Verification status
-* Evidence strength if appropriate
+* Required skills
+* Skill weights
+* Minimum required proficiency
 
-Possible evidence types:
+Examples:
 
-* PROJECT
-* CERTIFICATION
-* INTERNSHIP
-* EXPERIENCE
-* ASSESSMENT
-* COURSEWORK
-* OTHER
+```text
+Backend Developer
+Software Engineer
+Frontend Developer
+Data Analyst
+Data Scientist
+```
 
-Possible verification states:
-
-* SELF_REPORTED
-* VERIFIED
-* PENDING
-
-Important:
-
-Do not implement the final deterministic skill scoring engine in Phase 2.
-
-Phase 3 will handle:
-
-* Proficiency scoring
-* Evidence strength
-* Semantic relevance
-* Skill score
-* Skill-gap detection
-* Role matching
-
-Phase 2 should only collect and structure the evidence required for those calculations.
+Do not hardcode role logic inside Flask routes.
 
 ---
 
-# 9. Resume Upload & Parsing
+## 6. Role Matching
 
-Implement basic resume upload functionality.
+Calculate role compatibility using the student's existing skill scores.
 
-Supported formats:
+Example:
 
-* PDF
-* DOCX
+```text
+Python       â†’ 80
+SQL          â†’ 70
+Flask        â†’ 85
+Docker       â†’ 40
+```
 
-Recommended libraries:
+For each role, compare the student's skill score against the required skill score.
 
-* PyMuPDF for PDF extraction
-* python-docx for DOCX extraction
+Use a deterministic weighted formula.
 
-The system should:
+Example:
 
-1. Accept a resume upload.
-2. Validate file type.
-3. Store the uploaded file safely.
-4. Extract text.
-5. Store the extracted text or appropriate metadata.
-6. Associate the resume with the student.
-7. Return extraction status.
+```text
+Role Match =
+Î£(student_skill_score Ã— skill_weight)
+---------------------------------------
+Î£(skill_weight)
+```
 
-Suggested endpoint:
+Return the contributing skills and scores.
 
-`POST /api/students/resume`
-
-Possible response information:
-
-* Upload success
-* Filename
-* File type
-* Extraction status
-* Extracted text length
-* Resume ID
-
-Do not use Claude AI for resume skill extraction yet.
-
-AI-based extraction and normalization will be implemented in Phase 4A.
-
-Do not claim that AI extraction has been implemented during Phase 2.
+Do not use AI or ML.
 
 ---
 
-# 10. Database Design
+## 7. Skill Gap Detection
 
-Use:
+For the selected target role:
 
-**SQLite + SQLAlchemy**
+```text
+Required Score - Student Score = Gap
+```
 
-Create appropriate relationships between:
+Example:
 
-* User
+```text
+SQL:
+Required = 75
+Student = 55
+Gap = 20
+```
+
+Classify gaps:
+
+```text
+0       â†’ Meets requirement
+1â€“10    â†’ Minor gap
+11â€“25   â†’ Moderate gap
+26+     â†’ Major gap
+```
+
+The thresholds should be configurable.
+
+Also identify completely missing required skills.
+
+---
+
+## 8. Learning Recommendations
+
+Create a rule-based recommendation system.
+
+No AI.
+
+No ML.
+
+No external API.
+
+Recommendations should be generated from skill gaps.
+
+Example:
+
+```text
+Python gap
+â†’ Python fundamentals
+
+SQL gap
+â†’ SQL joins, aggregation, subqueries
+
+DSA gap
+â†’ Arrays, hashing, linked lists, trees
+
+Flask gap
+â†’ Flask routing, REST APIs, authentication
+
+Docker gap
+â†’ Containers, images, Dockerfiles
+```
+
+Store recommendation data in structured configuration or database tables rather than putting large rules inside routes.
+
+---
+
+## 9. REST APIs
+
+Expose the Phase 3 functionality through the existing Flask REST architecture.
+
+Suggested endpoints:
+
+```text
+/api/assessments
+/api/skills/scores
+/api/skill-gaps
+/api/roles
+/api/role-matches
+/api/recommendations
+```
+
+Follow the existing:
+
+* JWT authentication
+* Authorization
+* Marshmallow validation
+* Service layer
+* Error handling
+* HTTP status conventions
+
+---
+
+## 10. Database
+
+Create only the models required for Phase 3.
+
+Possible models:
+
+* Assessment
+* AssessmentQuestion
+* AssessmentAttempt
+* AssessmentAnswer
+* Role
+* RoleSkillRequirement
+* LearningRecommendation
+
+Reuse all existing Phase 2 models.
+
+Do not duplicate:
+
 * StudentProfile
 * Skill
 * StudentSkill
@@ -449,232 +289,316 @@ Create appropriate relationships between:
 * SkillEvidence
 * Resume
 
-Use foreign keys and relationships properly.
-
-Requirements:
-
-* Avoid unnecessary duplication.
-* Add useful indexes where appropriate.
-* Add uniqueness constraints where appropriate.
-* Use timestamps where useful.
-* Preserve existing Phase 1 models and relationships.
-* Create/update migrations as necessary.
-
-Do not replace SQLite with PostgreSQL during this phase.
+Create migrations for new models.
 
 ---
 
-# 11. API Design
+## 11. Architecture
 
-Keep the existing REST API structure.
-
-Current API areas include:
-
-* `/api/auth`
-* `/api/students`
-* `/api/skills`
-* `/api/assessments`
-* `/api/jobs`
-
-Phase 2 primarily works with:
-
-* `/api/students`
-* `/api/skills`
-
-Follow consistent:
-
-* JSON request/response format
-* HTTP status codes
-* Validation
-* Error responses
-* Authentication
-* Authorization
-
-Backend owns the business logic.
-
----
-
-# 12. Security Requirements
-
-Ensure:
-
-* JWT authentication is required for student-specific endpoints.
-* Students can access only their own profile/data.
-* User IDs are obtained from the authenticated JWT rather than trusted request-body values.
-* File uploads validate allowed extensions/types.
-* File paths are sanitized.
-* Uploaded files cannot execute as code.
-* Secrets are never hardcoded.
-* `.env` is not committed.
-* Do not expose passwords or password hashes through APIs.
-
----
-
-# 13. Testing
-
-Add tests for the Phase 2 functionality.
-
-At minimum test:
-
-* Student profile creation/update
-* Student profile authorization
-* Skill creation/listing
-* Student skill creation/update/deletion
-* Duplicate student-skill prevention
-* Project CRUD
-* Certification CRUD
-* Experience CRUD
-* Internship CRUD
-* Skill evidence creation
-* Resume upload validation
-* Unsupported file types
-* Unauthorized requests
-* Access to another student's resources
-
-Run the existing Phase 1 tests as well.
-
-Do not break existing authentication tests.
-
----
-
-# AI / ML Boundary
-
-Claude AI is NOT required for Phase 2.
-
-Do not add AI calls just to make the feature appear intelligent.
-
-Phase 2 is primarily:
-
-**Profile + Skills + Evidence + Resume Data**
-
-Phase 3 will implement deterministic skill intelligence.
-
-Phase 4A will implement Claude integration.
-
----
-
-# Architecture Decisions
-
-* Backend: Python + Flask
-* API: REST
-* ORM: SQLAlchemy
-* Database: SQLite
-* Authentication: JWT
-* AI: Claude API
-* NLP: Sentence Transformers + cosine similarity
-* Resume parsing: PyMuPDF + python-docx
-* Frontend: React + Vite
-* Charts: Recharts
-* Backend owns business logic
-* Frontend communicates with backend through REST APIs
-* Deterministic scoring is independent of Claude
-
----
-
-# Folder Structure
-
-Current project:
+Maintain:
 
 ```text
-placement_portal/
-├── backend/
-│   ├── app/
-│   │   ├── models/
-│   │   ├── routes/
-│   │   ├── schemas/
-│   │   ├── services/
-│   │   └── utils/
-│   ├── migrations/
-│   ├── tests/
-│   ├── .env.example
-│   ├── config.py
-│   ├── extensions.py
-│   ├── README.md
-│   ├── requirements.txt
-│   └── run.py
-├── database/
-├── frontend/
-├── ml/
-└── progress.md
+Routes
+   â†“
+Schemas
+   â†“
+Services
+   â†“
+Business Logic
+   â†“
+Models / Database
 ```
 
-Do not reorganize the entire project unnecessarily.
+Keep scoring and matching logic inside dedicated services.
+
+Do not put business logic directly in route functions.
 
 ---
 
-# Important Agent Instructions
+## 12. Testing
 
-1. Read this file completely before making changes.
-2. Inspect the existing Phase 1 implementation.
-3. Do not recreate or rewrite working Phase 1 code.
-4. Do not move to Phase 3.
-5. Do not implement Claude AI yet.
-6. Do not build the React frontend yet.
-7. Do not add fake or placeholder functionality and present it as complete.
-8. Reuse existing architecture and conventions.
-9. Keep changes focused on Phase 2.
-10. Run tests after implementation.
-11. Fix errors found during testing.
-12. Update this file when Phase 2 progresses.
-13. Preserve completed Phase 1 status.
-14. Do not delete existing functionality without a clear technical reason.
+Create tests for:
+
+* Assessment creation
+* Assessment submission
+* Assessment scoring
+* Proficiency calculation
+* Evidence scoring
+* Overall skill score
+* Role creation
+* Role requirements
+* Role matching
+* Skill gap detection
+* Missing skills
+* Recommendations
+* Authorization
+* Validation
+* Boundary scores
+* Empty data
+* Invalid data
+
+Run the complete existing test suite as regression testing.
+
+Phase 1 and Phase 2 functionality must continue passing.
 
 ---
 
-# Current Status
+## 13. No AI / ML Requirement
 
-## Phase 1
+This project intentionally does NOT use:
 
-**Completed and committed.**
+* Claude
+* OpenAI
+* Gemini
+* Sentence Transformers
+* Hugging Face models
+* Embeddings
+* Machine-learning models
+* External AI APIs
+* Paid APIs
 
-## Phase 2
+The intelligence layer is implemented using:
 
-**Completed.**
+* deterministic formulas
+* weighted scoring
+* configurable thresholds
+* database-driven rules
+* rule-based recommendations
 
-### Checklist
+The system must remain fully functional without an AI model or external AI service.
 
-* [x] Student profile
-* [x] Skills
-* [x] Student skills
-* [x] Projects
-* [x] Certifications
-* [x] Experience
-* [x] Internship history
-* [x] Skill evidence
-* [x] Resume upload
-* [x] Resume text extraction
-* [x] Database relationships
+---
+
+## Phase 3 Checklist
+
+* [x] Assessment model
+* [x] Assessment questions
+* [x] Assessment attempts
+* [x] Assessment answers
+* [x] Assessment scoring
+* [x] Proficiency scoring
+* [x] Evidence scoring
+* [x] Overall skill score
+* [x] Role model
+* [x] Role skill requirements
+* [x] Role matching
+* [x] Skill gap detection
+* [x] Rule-based recommendations
 * [x] REST APIs
 * [x] Validation
 * [x] Authorization
-* [x] Tests
+* [x] Database migrations
+* [x] Unit tests
+* [x] API tests
+* [x] Full regression tests
 * [x] Documentation
 
 ---
 
-# Known Issues
+## Current Status
 
-None currently known.
+### Phase 1
 
-If an issue is discovered during implementation, document it here instead of silently ignoring it.
+Completed and committed.
+
+### Phase 2
+
+Completed and committed.
+
+### Phase 3
+
+Implemented and regression tested. See `backend/README.md` for formulas and API behavior.
 
 ---
 
-# Next Task
+## Phase 4A â€” Free/Local AI Backend
 
-Complete Phase 2 — Student Profile, Skills & Evidence.
+### Objective
 
-After all Phase 2 checklist items are implemented and tested, stop and report:
+Add a free/local AI backend layer for generative tasks that benefit from natural-language reasoning.
 
-1. What was implemented.
-2. What tests were run.
-3. Whether all tests passed.
-4. Any remaining issues.
-5. Update this file with the final Phase 2 status.
+The AI layer must operate **on top of the deterministic Phase 3 Skill Intelligence Engine**.
 
-Do not begin Phase 3 until explicitly instructed.
- 
- - - -  
-  
- #   P h a s e   2   C o m p l e t i o n   S u m m a r y  
- 
+The AI layer must NOT replace or modify deterministic Phase 3 calculations.
+
+### AI-supported features
+
+* [x] Resume skill extraction
+* [x] Skill normalization suggestions
+* [x] Skill-gap explanations
+* [x] Personalized learning roadmap generation
+
+### Deterministic Phase 3 responsibilities remain unchanged
+
+The AI layer must NOT calculate:
+
+* [ ] Skill scores
+* [ ] Proficiency scores
+* [ ] Evidence scores
+* [ ] Semantic similarity
+* [ ] Role-match percentages
+* [ ] Numerical skill gaps
+* [ ] Assessment scores
+
+These remain handled by the Phase 3 deterministic services.
+
+### Free/Local AI Backend
+
+* [x] Local AI service abstraction
+* [x] Local model/runtime integration
+* [x] No paid external AI API
+* [x] No API key requirement
+* [x] Request timeout handling
+* [x] Model/runtime error handling
+* [x] Safe structured response parsing
+* [x] AI response validation
+* [x] Graceful fallback when local AI is unavailable
+* [x] AI model configuration kept separate from routes
+
+### APIs
+
+* [x] Resume skill extraction API
+* [x] Skill normalization API
+* [x] Skill-gap explanation API
+* [x] Personalized roadmap API
+
+### Testing
+
+* [x] Successful AI response
+* [x] Mocked AI response
+* [x] Malformed response handling
+* [x] Timeout handling
+* [x] Model/runtime failure handling
+* [x] Missing model/runtime handling
+* [x] Fallback behavior
+* [x] Authentication/authorization
+* [x] Phase 3 regression tests
+
+### Requirements
+
+The application must remain fully functional without the local AI model.
+
+Phase 3 deterministic functionality must continue working even when the AI runtime or model is unavailable.
+
+No Claude, Anthropic, OpenAI, Gemini, or other paid external AI API is required.
+
+### Phase 4A implementation notes
+
+The architecture is `AI routes â†’ LocalAIService â†’ OllamaAdapter â†’ loopback Ollama runtime`. The adapter uses Python's standard library HTTP client, and Flask does not load a model at startup. The default local model is `qwen2.5:1.5b-instruct-q5_0`; install Ollama and run `ollama run qwen2.5:1.5b-instruct-q5_0` to enable local generation. Runtime URL, model name, timeout, and input limit are environment-configurable in `backend/config.py` and listed in `backend/.env.example`.
+
+All four APIs are authenticated and student-scoped. Resume skills are catalog-matched suggestions with source evidence, are labeled unverified, and are never persisted by AI. Normalization must match an existing skill. Gap explanations and roadmaps receive Phase 3 results; their numeric scores, role match, and gaps are carried through unchanged. When the local runtime is unavailable or its output times out, is empty, malformed, or fails validation, the service returns a labeled deterministic fallback. Tests replace the adapter with mocked responses and do not download a model.
+
+### Current Status
+
+Implemented and regression tested with an optional local Ollama runtime and Qwen2.5 1.5B instruct model. The backend starts and Phase 3 remains available without Ollama or downloaded models. See `backend/README.md` for setup, APIs, configuration, and fallback behavior.
+
+## Phase 4B â€” Frontend & Student Dashboard
+
+### Objective
+
+Build the frontend interface for SkillBridge AI and connect it to the existing backend APIs from Phases 1â€“4A.
+
+The frontend should present the student's profile, skills, assessments, skill scores, skill gaps, role matching, recommendations, and AI-powered insights through a clear and responsive dashboard.
+
+The frontend must consume existing backend APIs rather than duplicating business logic.
+
+### Core Frontend
+
+* [x] Frontend project setup
+* [x] Responsive application layout
+* [x] Navigation/sidebar
+* [x] Authentication pages
+* [x] Login
+* [x] Registration
+* [x] Protected routes
+* [x] Student dashboard
+* [x] Profile page
+* [x] Skills page
+* [x] Projects page
+* [x] Certifications page
+* [x] Experience/internships page
+
+### Skill Intelligence Dashboard
+
+* [x] Overall skill score visualization
+* [x] Individual skill scores
+* [x] Proficiency scores
+* [x] Evidence scores
+* [x] Assessment interface
+* [x] Assessment results
+* [x] Skill-gap visualization
+* [x] Missing required skills
+* [x] Role matching results
+* [x] Target-role selection
+* [x] Rule-based learning recommendations
+
+### AI Features
+
+Consume the Phase 4A APIs for:
+
+* [x] Resume skill extraction
+* [x] Skill normalization suggestions
+* [x] Skill-gap explanations
+* [x] Personalized learning roadmap
+
+AI-generated information must be clearly distinguishable from verified/deterministic student data.
+
+The frontend must not calculate:
+
+* [ ] Skill scores
+* [ ] Proficiency scores
+* [ ] Evidence scores
+* [ ] Skill gaps
+* [ ] Role-match percentages
+
+All numerical intelligence must come from the backend.
+
+### API Integration
+
+* [x] Centralized API client
+* [x] JWT authentication handling
+* [x] Authenticated API requests
+* [x] Loading states
+* [x] Empty states
+* [x] Validation errors
+* [x] API error handling
+* [x] AI unavailable/fallback states
+* [x] Session/logout handling
+
+### UX & Accessibility
+
+* [x] Responsive design
+* [x] Clear visual hierarchy
+* [x] Accessible buttons and forms
+* [x] Keyboard-friendly navigation
+* [x] Form validation
+* [x] Appropriate loading indicators
+* [x] User-friendly error messages
+
+### Testing
+
+* [x] Frontend component tests
+* [x] Authentication flow testing
+* [x] API integration testing
+* [x] Protected-route testing
+* [x] Assessment flow testing
+* [x] Dashboard data rendering
+* [x] Skill-gap rendering
+* [x] AI fallback-state testing
+* [x] Responsive layout testing (tablet/mobile breakpoint regression coverage)
+
+### Requirements
+
+The frontend must work with the existing Flask backend.
+
+Do not move backend business logic into the frontend.
+
+Do not duplicate Phase 3 scoring or matching formulas in frontend code.
+
+Do not expose local AI runtime configuration or model details unnecessarily to users.
+
+### Current Status
+
+Phase 4B frontend is implemented. The frontend test suite passes (9 tests), and the Vite production build succeeds. Responsive tablet/mobile breakpoints have regression coverage. See `frontend/README.md` for setup and test commands.
+
+Do not begin Phase 5 or industry-specific features until explicitly instructed.\n

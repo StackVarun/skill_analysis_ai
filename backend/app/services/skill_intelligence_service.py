@@ -179,26 +179,5 @@ class SkillIntelligenceService:
 
     @staticmethod
     def seed_roles():
-        definitions = {
-            "Software Engineer": ["Python", "Java", "Data Structures and Algorithms", "SQL", "Git"],
-            "Backend Developer": ["Python", "Flask", "SQL", "Docker", "REST APIs"],
-            "Frontend Developer": ["JavaScript", "React", "HTML", "CSS", "Git"],
-            "Data Analyst": ["SQL", "Python", "Excel", "Statistics", "Data Visualization"],
-            "Data Scientist": ["Python", "SQL", "Statistics", "Machine Learning", "Data Visualization"],
-        }
-        created = []
-        for name, skill_names in definitions.items():
-            role = Role.query.filter_by(name=name).first()
-            if not role:
-                role = Role(name=name, description=f"Core skills for a {name}.")
-                db.session.add(role); db.session.flush()
-            for skill_name in skill_names:
-                skill = Skill.query.filter(db.func.lower(Skill.name) == skill_name.lower()).first()
-                if not skill:
-                    skill = Skill(name=skill_name, category="Role requirement")
-                    db.session.add(skill); db.session.flush()
-                if not RoleSkillRequirement.query.filter_by(role_id=role.id, skill_id=skill.id).first():
-                    role.requirements.append(RoleSkillRequirement(skill_id=skill.id, required_proficiency=current_app.config.get("ROLE_DEFAULT_REQUIRED_PROFICIENCY", 70), weight=1.0))
-            created.append(role)
-        db.session.commit()
-        return created
+        from app.services.reference_data_service import ReferenceDataService
+        return ReferenceDataService.seed()["roles"]

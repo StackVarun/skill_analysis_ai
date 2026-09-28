@@ -39,14 +39,24 @@ htmlcov/
 .DS_Store
 Thumbs.db
 
-# Build/package
+# Python build/package
 build/
 dist/
 *.egg-info/
 
-# Node
+# Node / React / Vite
 node_modules/
 frontend/node_modules/
 
-# Frontend build
+# Vite build output
 frontend/dist/
+
+# Vite local environment files
+.env.local
+.env.*.local
+
+# Local AI / model artifacts
+models/
+*.gguf
+*.bin
+*.safetensors
