@@ -35,3 +35,24 @@
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
 /* Shared role workspaces */
 .portal-page{display:flex;flex-direction:column;gap:16px}.portal-page>h2{font-size:26px;margin:0}.portal-page>h3{margin:12px 0 0}.portal-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px;align-items:start}.portal-card,.portal-form{padding:20px}.portal-card h3{margin:7px 0}.portal-card p{font-size:12px}.portal-card article{border-top:1px solid var(--line);padding:12px 0}.portal-tags{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}.portal-tags span{padding:5px 8px;border-radius:7px;background:#f1efff;color:#594ec0;font-size:10px}.portal-form{display:flex;flex-direction:column;gap:10px}.portal-form label{display:flex;flex-direction:column;gap:5px;text-transform:capitalize;font-size:11px;font-weight:700}.portal-form input,.portal-form select,.portal-search input,.portal-card input{min-height:37px;padding:8px;border:1px solid var(--line);border-radius:8px;background:#fff}.portal-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.portal-metrics article{padding:18px}.portal-metrics small{display:block;color:var(--muted)}.portal-metrics strong{display:block;font-size:24px;margin-top:7px}.portal-skill-row{display:flex;gap:6px}.portal-skill-row input{width:75px}.portal-skill-row select{flex:1;min-width:0}.portal-search{display:flex;gap:8px}.portal-search input{flex:1}.portal-chart-row{display:grid;grid-template-columns:100px 1fr 40px;gap:8px;align-items:center;margin:12px 0;font-size:11px}.portal-chart-row div{height:12px;background:#f1f0fa;border-radius:8px}.portal-chart-row i{display:block;background:var(--purple);height:100%;border-radius:8px}@media(max-width:820px){.portal-grid{grid-template-columns:1fr}.portal-metrics{grid-template-columns:repeat(2,1fr)}}
+
+/* Project skill autocomplete, links, and the shared target role control */
+.topbar-role-picker{display:flex;align-items:center;gap:8px;color:#818697;font-size:10px;font-weight:700;white-space:nowrap}
+.topbar-role-picker select{min-width:155px;max-width:210px;min-height:36px;padding:0 28px 0 10px;border:1px solid var(--line);border-radius:8px;background:#fff;color:#303348;font-size:11px;font-weight:600}
+.technology-picker{position:relative;display:flex;flex-direction:column;gap:7px}
+.technology-picker>input{width:100%;min-height:38px;padding:9px 11px;border:1px solid var(--line);border-radius:8px;background:#fff;color:#303348;font:inherit}
+.technology-picker>small{color:var(--muted);font-size:10px;font-weight:400}
+.technology-chips{display:flex;flex-wrap:wrap;gap:6px}
+.technology-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 8px;border-radius:999px;background:#f1efff;color:#594ec0;font-size:10px;font-weight:700}
+.technology-chip button{border:0;background:transparent;color:inherit;font-size:14px;line-height:1;cursor:pointer}
+.technology-suggestions{position:absolute;top:100%;right:0;left:0;z-index:5;display:flex;flex-direction:column;max-height:220px;overflow:auto;margin-top:2px;padding:5px;border:1px solid var(--line);border-radius:9px;background:#fff;box-shadow:0 10px 28px #24204420}
+.technology-suggestions button{display:flex;justify-content:space-between;gap:12px;padding:9px 10px;border:0;border-radius:6px;background:#fff;color:#303348;text-align:left;cursor:pointer}
+.technology-suggestions button:hover,.technology-suggestions button:focus{background:#f4f2ff}
+.technology-suggestions small{color:var(--muted)}
+.role-suggestion{margin:0;color:var(--muted);font-size:11px}
+.role-suggestion strong{color:#554ac1}
+.portfolio-links{display:flex;flex-wrap:wrap;gap:12px;margin-top:10px}
+.portfolio-links a{color:#554ac1;font-size:11px;font-weight:700;text-decoration:none}
+.portfolio-links a:hover{text-decoration:underline}
+@media(max-width:820px){.topbar-role-picker{gap:4px}.topbar-role-picker select{min-width:112px;max-width:135px;min-height:32px;padding-left:6px;font-size:9px}.topbar-user{margin-left:5px}}
+@media(max-width:580px){.topbar-role-picker{font-size:0}.topbar-role-picker select{min-width:100px;max-width:112px}.topbar-user{display:none}}

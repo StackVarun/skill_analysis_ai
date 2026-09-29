@@ -1,6 +1,7 @@
 import { Navigate, NavLink, Outlet, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from './context/AuthContext';
+import { api } from './services/api';
 import ProtectedRoute from './components/ProtectedRoute';
 import { StudentOpportunities, IndustryWorkspace } from './pages/OpportunityPages';
 import { FacultyWorkspace, InstitutionWorkspace, SkillPassport } from './pages/AdditionalPages';
@@ -21,10 +22,17 @@ const navigation = [
 ];
 
 function AppShell() {
-  const { user, logout } = useAuth();
+  const { user, logout, displayName } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [targetRoleId, setTargetRoleId] = useState(() => localStorage.getItem('skillbridge_target_role') || '');
+  const [roles, setRoles] = useState([]);
+  useEffect(() => {
+    if (user?.role !== 'STUDENT') return;
+    let active = true;
+    api.get('/roles').then((result) => { if (active) setRoles(Array.isArray(result) ? result : []); }).catch(() => { if (active) setRoles([]); });
+    return () => { active = false; };
+  }, [user?.role]);
   const updateTarget = (value) => {
     setTargetRoleId(value);
     if (value) localStorage.setItem('skillbridge_target_role', value);
@@ -39,7 +47,7 @@ function AppShell() {
       <div className="sidebar-bottom"><div className="local-note"><span className="local-pulse" />Private workspace<small>Your learning data, in one place</small></div><button className="nav-link logout-link" onClick={() => { logout(); navigate('/login'); }}><span className="nav-icon">↪</span>Sign out</button></div>
     </aside>
     <main className="main-area">
-      <header className="topbar"><button className="mobile-brand" onClick={() => navigate('/app')} aria-label="Go to overview">S</button><div><div className="eyebrow">{user?.role} WORKSPACE</div><h1>{activePage}</h1></div><div className="topbar-user"><div className="avatar">{(user?.first_name || 'S').slice(0, 1).toUpperCase()}</div><span><strong>{user?.full_name || user?.first_name || 'Student'}</strong><small>{user?.role} account</small></span></div></header>
+      <header className="topbar"><button className="mobile-brand" onClick={() => navigate('/app')} aria-label="Go to overview">S</button><div><div className="eyebrow">{user?.role} WORKSPACE</div><h1>{activePage}</h1></div>{user?.role === 'STUDENT' && <label className="topbar-role-picker">Target role<select aria-label="Workspace target role" value={targetRoleId} onChange={(event) => updateTarget(event.target.value)}><option value="">Choose a role</option>{roles.map((role) => <option key={role.id} value={role.id}>{role.name}</option>)}</select></label>}<div className="topbar-user"><div className="avatar">{(displayName || 'S').slice(0, 1).toUpperCase()}</div><span><strong>{displayName}</strong><small>{user?.role} account</small></span></div></header>
       <div className="content-area"><Outlet context={{ targetRoleId, setTargetRoleId: updateTarget }} /></div>
     </main>
     <nav className="mobile-nav" aria-label="Mobile navigation">{menu.slice(0, 5).map((item) => <NavLink key={item.to} to={item.to} end={item.end} aria-label={item.label} className={({ isActive }) => isActive ? 'active' : ''}><span>{item.icon}</span><small>{item.label.split(' ')[0]}</small></NavLink>)}</nav>

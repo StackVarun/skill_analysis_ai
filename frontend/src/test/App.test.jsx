@@ -1,11 +1,13 @@
+import { useState } from 'react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { readFileSync } from 'node:fs';
 import { MemoryRouter, Outlet, Route, Routes } from 'react-router-dom';
-import { AuthProvider } from '../context/AuthContext';
+import { AuthProvider, useAuth } from '../context/AuthContext';
 import AuthPage from '../pages/AuthPage';
 import ProtectedRoute from '../components/ProtectedRoute';
-import { AIStudioPage, AssessmentsPage, DashboardPage, RolesPage } from '../pages/WorkspacePages';
+import { AIStudioPage, AssessmentsPage, DashboardPage, ProfilePage, RolesPage, PortfolioPage } from '../pages/WorkspacePages';
+import { SkillPassport } from '../pages/AdditionalPages';
 import { api, TOKEN_KEY } from '../services/api';
 
 function withAuth(children, initialEntries = ['/']) {
@@ -13,7 +15,7 @@ function withAuth(children, initialEntries = ['/']) {
 }
 
 describe('student workspace frontend', () => {
-  beforeEach(() => { vi.restoreAllMocks(); });
+  beforeEach(() => { vi.restoreAllMocks(); localStorage.clear(); });
 
   it('redirects a protected route to login when there is no JWT', async () => {
     withAuth(<Routes><Route element={<ProtectedRoute />}><Route path="/private" element={<p>Private dashboard</p>} /></Route><Route path="/login" element={<p>Login page</p>} /></Routes>, ['/private']);
@@ -63,6 +65,21 @@ describe('student workspace frontend', () => {
     expect((screen.getAllByText('Backend Developer')).length).toBeGreaterThan(0);
     expect(screen.getByText('Build Docker')).toBeInTheDocument();
     expect((screen.getAllByText('63.5')).length).toBeGreaterThan(0);
+  });
+
+  it('saves only editable profile fields and omits server metadata', async () => {
+    vi.spyOn(api, 'get').mockResolvedValue({ id: 9, user_id: 4, full_name: 'Mina Patel', phone: '1234567890', institution: 'North College', created_at: '2026-01-01', updated_at: '2026-01-02' });
+    vi.spyOn(api, 'put').mockResolvedValue({ id: 9, user_id: 4, full_name: 'Mina Patel' });
+    withAuth(<ProfilePage />);
+    await waitFor(() => expect(screen.getByLabelText('Full name')).toHaveValue('Mina Patel'));
+    fireEvent.click(screen.getByRole('button', { name: /save profile/i }));
+    await waitFor(() => expect(api.put).toHaveBeenCalled());
+    const [, sent] = api.put.mock.calls[0];
+    expect(sent).toMatchObject({ full_name: 'Mina Patel', institution: 'North College' });
+    expect(sent).not.toHaveProperty('id');
+    expect(sent).not.toHaveProperty('user_id');
+    expect(sent).not.toHaveProperty('created_at');
+    expect(sent).not.toHaveProperty('updated_at');
   });
 
   it('submits assessment answers without calculating the score in the UI', async () => {
@@ -123,4 +140,71 @@ describe('student workspace frontend', () => {
     globalThis.fetch = originalFetch;
     window.removeEventListener('skillbridge:unauthorized', listener);
   });
+});
+
+
+it('keeps the newly selected target role after dashboard data reloads', async () => {
+  vi.spyOn(api, 'get').mockImplementation(async (path) => {
+    if (path === '/students/profile') return { full_name: 'James Smith' };
+    if (path === '/roles') return [{ id: 1, name: 'Backend Developer' }, { id: 2, name: 'Frontend Developer' }];
+    if (path.includes('/match')) return { role_id: Number(path.split('/')[2]), role: 'Developer', match_percentage: 50, skill_gaps: [] };
+    if (path.startsWith('/skill-gaps')) return { match_percentage: 50, skill_gaps: [], missing_skills: [] };
+    return [];
+  });
+  function RoleShell() {
+    const [targetRoleId, setTargetRoleId] = useState('1');
+    return <><output data-testid="chosen-role">{targetRoleId}</output><Outlet context={{ targetRoleId, setTargetRoleId }} /></>;
+  }
+  withAuth(<Routes><Route element={<RoleShell />}><Route path="/" element={<DashboardPage />} /></Route></Routes>);
+  fireEvent.change(await screen.findByLabelText('Target role'), { target: { value: '2' } });
+  await waitFor(() => expect(screen.getByLabelText('Target role')).toHaveValue('2'));
+  expect(screen.getByTestId('chosen-role')).toHaveTextContent('2');
+  expect(api.get).toHaveBeenCalledWith('/skill-gaps?role_id=2');
+});
+
+it('adds catalog skills to a project, suggests a role, normalizes URLs, and shows clickable links', async () => {
+  let saved = [];
+  vi.spyOn(api, 'get').mockImplementation(async (path) => {
+    if (path === '/students/projects') return saved;
+    if (path === '/skills') return [{ id: 7, name: 'React', category: 'Frontend' }, { id: 8, name: 'Flask', category: 'Backend' }];
+    throw new Error(`Unexpected ${path}`);
+  });
+  vi.spyOn(api, 'post').mockImplementation(async (path, payload) => { saved = [{ id: 10, ...payload }]; return saved[0]; });
+  withAuth(<PortfolioPage />);
+  const techInput = await screen.findByRole('combobox', { name: 'Technologies' });
+  fireEvent.change(techInput, { target: { value: 'Rea' } });
+  fireEvent.click(await screen.findByRole('option', { name: /React/ }));
+  expect(screen.getByRole('status')).toHaveTextContent('Frontend Developer');
+  expect(screen.getByLabelText('Your role')).toHaveValue('Frontend Developer');
+  fireEvent.change(screen.getByLabelText('Project title'), { target: { value: 'Study planner' } });
+  fireEvent.change(screen.getByLabelText('Project URL'), { target: { value: 'study.example.com' } });
+  fireEvent.change(screen.getByLabelText('GitHub URL'), { target: { value: 'github.com/varun/study' } });
+  fireEvent.click(screen.getByRole('button', { name: /save entry/i }));
+  await waitFor(() => expect(api.post).toHaveBeenCalled());
+  expect(api.post).toHaveBeenCalledWith('/students/projects', expect.objectContaining({ technologies: 'React', skill_ids: [7], role: 'Frontend Developer', project_url: 'https://study.example.com', github_url: 'https://github.com/varun/study' }));
+  expect(await screen.findByRole('link', { name: 'Open project ↗' })).toHaveAttribute('href', 'https://study.example.com');
+  expect(screen.getByRole('link', { name: 'View GitHub ↗' })).toHaveAttribute('href', 'https://github.com/varun/study');
+});
+
+it('renders a skill passport even when optional collections are absent', async () => {
+  vi.spyOn(api, 'get').mockResolvedValue({ student: { full_name: 'Mina Patel' }, skills: [{ skill_id: 1, skill: 'Python', overall_score: 80 }] });
+  withAuth(<SkillPassport />);
+  expect(await screen.findByRole('heading', { name: 'Digital skill passport' })).toBeInTheDocument();
+  expect(await screen.findByText('Mina Patel')).toBeInTheDocument();
+  expect(screen.getByText(/Python:/)).toBeInTheDocument();
+  expect(screen.getAllByText('Nothing to show yet.').length).toBeGreaterThan(0);
+});
+
+it('updates the authenticated display name as soon as the profile is saved', async () => {
+  localStorage.setItem(TOKEN_KEY, 'student-token');
+  vi.spyOn(api, 'get').mockImplementation(async (path) => path === '/auth/me' ? { id: 4, role: 'STUDENT', full_name: 'Old Name', first_name: 'Old' } : { full_name: 'Old Name' });
+  vi.spyOn(api, 'put').mockResolvedValue({ full_name: 'New Name' });
+  function DisplayName() { const { displayName } = useAuth(); return <output data-testid="display-name">{displayName}</output>; }
+  function TestApp() { return <><DisplayName /><ProfilePage /></>; }
+  withAuth(<TestApp />);
+  expect(await screen.findByTestId('display-name')).toHaveTextContent('Old Name');
+  await waitFor(() => expect(screen.getByLabelText('Full name')).toHaveValue('Old Name'));
+  fireEvent.change(screen.getByLabelText('Full name'), { target: { value: 'New Name' } });
+  fireEvent.click(screen.getByRole('button', { name: /save profile/i }));
+  await waitFor(() => expect(screen.getByTestId('display-name')).toHaveTextContent('New Name'));
 });

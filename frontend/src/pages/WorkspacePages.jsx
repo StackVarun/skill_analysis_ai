@@ -105,7 +105,7 @@ const PROFILE_FIELDS = [
 ];
 
 export function ProfilePage() {
-  const { user } = useAuth();
+  const { user, updateProfileName } = useAuth();
   const load = useCallback(async () => { try { return await api.get('/students/profile'); } catch (error) { if (error.status === 404) return null; throw error; } }, []);
   const { data, loading, error, refresh } = useResource(load, [load]);
   const [form, setForm] = useState(EMPTY_PROFILE);
@@ -118,7 +118,7 @@ export function ProfilePage() {
     payload.graduation_year = form.graduation_year ? Number(form.graduation_year) : null;
     payload.cgpa = form.cgpa ? Number(form.cgpa) : null;
     Object.keys(payload).forEach((key) => { if (payload[key] === '') payload[key] = null; });
-    try { await api.put('/students/profile', payload); setNotice('Your profile has been saved.'); await refresh(); }
+    try { await api.put('/students/profile', payload); updateProfileName(form.full_name); setNotice('Your profile has been saved.'); await refresh(); }
     catch (reason) { setFailure(friendlyError(reason)); } finally { setBusy(false); }
   }
   if (loading) return <Loading />;
@@ -277,6 +277,44 @@ function AIStatus({ result }) {
   return <div className={`ai-status ${fallback ? 'fallback' : available ? 'available' : 'neutral'}`} role="status"><span>{fallback ? '↻' : available ? '✦' : 'i'}</span><div><strong>{fallback ? 'Showing a safe fallback' : available ? 'Local AI suggestion' : 'Backend result'}</strong>{fallback && <small>{result.fallback_reason || result.ai_status?.fallback_reason || 'The AI response could not be used.'}</small>}</div></div>;
 }
 
+function TechnologyPicker({ catalog, selected, onChange }) {
+  const [query, setQuery] = useState('');
+  const normalized = query.trim().toLowerCase();
+  const matches = normalized ? catalog.filter((skill) => skill.name.toLowerCase().includes(normalized) && !selected.some((item) => item.id === skill.id)).slice(0, 8) : [];
+  function add(item) {
+    if (!selected.some((current) => current.name.toLowerCase() === item.name.toLowerCase())) onChange([...selected, item]);
+    setQuery('');
+  }
+  function addCustom(event) {
+    if (event.key === 'Enter' || event.key === ',') {
+      event.preventDefault();
+      const name = query.trim().replace(/,$/, '');
+      if (name) add({ name, id: null });
+    }
+  }
+  return <div className="technology-picker"><div className="technology-chips">{selected.map((item) => <span className="technology-chip" key={`${item.id || 'custom'}-${item.name}`}>{item.name}<button type="button" aria-label={`Remove ${item.name}`} onClick={() => onChange(selected.filter((current) => current !== item))}>×</button></span>)}</div><input aria-label="Technologies" role="combobox" aria-autocomplete="list" aria-expanded={matches.length > 0} value={query} onKeyDown={addCustom} onChange={(event) => setQuery(event.target.value)} placeholder="Type a technology or skill…" />{matches.length > 0 && <div className="technology-suggestions" role="listbox">{matches.map((skill) => <button type="button" role="option" aria-selected="false" key={skill.id} onClick={() => add({ name: skill.name, id: skill.id })}>{skill.name}{skill.category && <small>{skill.category}</small>}</button>)}</div>}<small>Choose catalog skills from the suggestions, or press Enter to add a custom technology.</small></div>;
+}
+
+function suggestProjectRole(technologies) {
+  const values = technologies.map((item) => item.toLowerCase());
+  const has = (terms) => values.some((value) => terms.some((term) => value.includes(term)));
+  const front = has(['react', 'vue', 'angular', 'html', 'css', 'javascript', 'typescript', 'frontend', 'next.js']);
+  const back = has(['flask', 'django', 'fastapi', 'node', 'express', 'java', 'spring', 'backend', 'sql', 'postgres', 'mongodb']);
+  if (front && back) return 'Full-stack Developer';
+  if (front) return 'Frontend Developer';
+  if (back) return 'Backend Developer';
+  if (has(['pandas', 'numpy', 'pytorch', 'tensorflow', 'scikit', 'machine learning', 'data science'])) return 'Data / Machine Learning Developer';
+  if (has(['flutter', 'react native', 'kotlin', 'swift', 'android', 'ios'])) return 'Mobile App Developer';
+  if (has(['docker', 'kubernetes', 'aws', 'azure', 'linux', 'devops'])) return 'DevOps Engineer';
+  return '';
+}
+
+function normalizeExternalUrl(value) {
+  if (!value || typeof value !== 'string') return value || null;
+  const trimmed = value.trim();
+  return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+}
+
 const RESOURCE_PATHS = {
   projects: '/students/projects', certifications: '/students/certifications',
   experience: '/students/experience', internships: '/students/internships',
@@ -294,12 +332,20 @@ export function PortfolioPage() {
   const load = useCallback(() => api.get(RESOURCE_PATHS[kind]), [kind]);
   const { data, loading, error, refresh } = useResource(load, [load]);
   const [form, setForm] = useState(EMPTY_FORMS[kind]); const [failure, setFailure] = useState(''); const [busy, setBusy] = useState(false); const [notice, setNotice] = useState('');
-  useEffect(() => setForm(EMPTY_FORMS[kind]), [kind]);
+  const [catalog, setCatalog] = useState([]); const [selectedTechnologies, setSelectedTechnologies] = useState([]); const [roleEdited, setRoleEdited] = useState(false);
+  useEffect(() => { let active = true; api.get('/skills').then((items) => { if (active) setCatalog(Array.isArray(items) ? items : []); }).catch(() => { if (active) setCatalog([]); }); return () => { active = false; }; }, []);
+  useEffect(() => { setForm(EMPTY_FORMS[kind]); setSelectedTechnologies([]); setRoleEdited(false); }, [kind]);
   async function createItem(event) {
     event.preventDefault(); setBusy(true); setFailure(''); setNotice('');
     const payload = Object.fromEntries(Object.entries(form).map(([key, value]) => [key, value === '' ? null : value]));
-    if (kind === 'projects') payload.skill_ids = [];
-    try { await api.post(RESOURCE_PATHS[kind], payload); setForm(EMPTY_FORMS[kind]); setNotice(`${RESOURCE_TITLES[kind].slice(0, -1) || RESOURCE_TITLES[kind]} added.`); await refresh(); }
+    if (kind === 'projects') {
+      payload.technologies = selectedTechnologies.map((item) => item.name).join(', ') || null;
+      payload.skill_ids = selectedTechnologies.filter((item) => item.id).map((item) => item.id);
+      payload.role = payload.role || suggestProjectRole(selectedTechnologies.map((item) => item.name)) || null;
+      payload.project_url = normalizeExternalUrl(payload.project_url);
+      payload.github_url = normalizeExternalUrl(payload.github_url);
+    }
+    try { await api.post(RESOURCE_PATHS[kind], payload); setForm(EMPTY_FORMS[kind]); setSelectedTechnologies([]); setRoleEdited(false); setNotice(`${RESOURCE_TITLES[kind].slice(0, -1) || RESOURCE_TITLES[kind]} added.`); await refresh(); }
     catch (reason) { setFailure(friendlyError(reason)); } finally { setBusy(false); }
   }
   async function removeItem(item) {
@@ -311,13 +357,13 @@ export function PortfolioPage() {
   return <div className="page-stack"><SectionHeading eyebrow="YOUR EXPERIENCE, TOGETHER" title="Portfolio" description="Projects, certifications, and work experience help make your skills visible." action={<div className="portfolio-count">{data?.length || 0} {RESOURCE_TITLES[kind].toLowerCase()}</div>} />
     <div className="portfolio-tabs" role="tablist" aria-label="Portfolio section">{Object.keys(RESOURCE_PATHS).map((key) => <button role="tab" aria-selected={kind === key} className={kind === key ? 'active' : ''} key={key} onClick={() => { setKind(key); setFailure(''); setNotice(''); }}>{RESOURCE_TITLES[key]}</button>)}</div>
     {error && <ErrorNotice onRetry={refresh}>{error}</ErrorNotice>}{failure && <ErrorNotice>{failure}</ErrorNotice>}{notice && <Notice tone="success">{notice}</Notice>}
-    <div className="portfolio-layout"><section className="surface-card portfolio-form-card"><span className="eyebrow">ADD TO YOUR STORY</span><h3>New {RESOURCE_TITLES[kind].replace(/s$/, '').toLowerCase()}</h3><form onSubmit={createItem} className="form-stack portfolio-form">{fields.map((field) => <label key={field.name}>{field.label}{field.options ? <select name={field.name} value={form[field.name]} onChange={(event) => setForm({ ...form, [field.name]: event.target.value })}>{field.options.map((item) => <option key={item}>{item}</option>)}</select> : field.type === 'textarea' ? <textarea name={field.name} rows="3" value={form[field.name]} onChange={(event) => setForm({ ...form, [field.name]: event.target.value })} /> : <input name={field.name} type={field.type || 'text'} required={field.required} value={form[field.name]} onChange={(event) => setForm({ ...form, [field.name]: event.target.value })} />}</label>)}<button className="button button-primary" disabled={busy}>{busy ? 'Saving…' : 'Save entry'} <span>→</span></button></form></section>
-      <section className="portfolio-list">{loading ? <Loading label="Loading your portfolio…" /> : data?.length ? data.map((item) => <article className="surface-card portfolio-item" key={item.id}><div className="portfolio-item-icon">{kind === 'projects' ? '▣' : kind === 'certifications' ? '✧' : '↗'}</div><div className="portfolio-item-body"><div className="portfolio-item-heading"><div><span className="eyebrow">{item.organization || item.issuing_organization || item.role || item.employment_type || RESOURCE_TITLES[kind]}</span><h3>{item.title || item.name || item.job_title || item.role}</h3></div><button className="icon-button" title="Delete entry" aria-label={`Delete ${item.title || item.name || item.job_title || item.role}`} onClick={() => removeItem(item)}>×</button></div><p>{item.description || item.technologies || item.credential_id || 'Add a description to share more about this experience.'}</p><div className="portfolio-meta">{item.start_date || item.issue_date || ''}{item.end_date ? ` — ${item.end_date}` : ''}{item.skills?.length ? ` · ${item.skills.map((skill) => skill.name).join(', ')}` : ''}</div></div></article>) : <EmptyState icon="▣" title={`Your ${RESOURCE_TITLES[kind].toLowerCase()} will show here`}>Add an entry using the form. Keep it specific and connect it to the skills you want to demonstrate.</EmptyState>}</section></div>
+    <div className="portfolio-layout"><section className="surface-card portfolio-form-card"><span className="eyebrow">ADD TO YOUR STORY</span><h3>New {RESOURCE_TITLES[kind].replace(/s$/, '').toLowerCase()}</h3><form onSubmit={createItem} className="form-stack portfolio-form">{fields.map((field) => field.name === 'technologies' && kind === 'projects' ? <div className="technology-field" key={field.name}><span className="field-label">Technologies</span><TechnologyPicker catalog={catalog} selected={selectedTechnologies} onChange={(items) => { setSelectedTechnologies(items); setForm((previous) => ({ ...previous, technologies: items.map((item) => item.name).join(', '), role: roleEdited ? previous.role : suggestProjectRole(items.map((item) => item.name)) })); }} /></div> : field.name === 'role' && kind === 'projects' ? <label key={field.name}>{field.label}<input name={field.name} value={form.role || ''} placeholder={suggestProjectRole(selectedTechnologies.map((item) => item.name)) || 'Suggested from technologies'} onChange={(event) => { setRoleEdited(true); setForm({ ...form, role: event.target.value }); }} /></label> : <label key={field.name}>{field.label}{field.options ? <select name={field.name} value={form[field.name]} onChange={(event) => setForm({ ...form, [field.name]: event.target.value })}>{field.options.map((item) => <option key={item}>{item}</option>)}</select> : field.type === 'textarea' ? <textarea name={field.name} rows="3" value={form[field.name]} onChange={(event) => setForm({ ...form, [field.name]: event.target.value })} /> : <input name={field.name} type={field.type || 'text'} placeholder={field.placeholder} required={field.required} value={form[field.name]} onChange={(event) => setForm({ ...form, [field.name]: event.target.value })} />}</label>)}{kind === 'projects' && <p className="role-suggestion" role="status">Suggested role: <strong>{suggestProjectRole(selectedTechnologies.map((item) => item.name)) || 'Add technologies to get a suggestion'}</strong></p>}<button className="button button-primary" disabled={busy}>{busy ? 'Saving…' : 'Save entry'} <span>→</span></button></form></section>
+      <section className="portfolio-list">{loading ? <Loading label="Loading your portfolio…" /> : data?.length ? data.map((item) => <article className="surface-card portfolio-item" key={item.id}><div className="portfolio-item-icon">{kind === 'projects' ? '▣' : kind === 'certifications' ? '✧' : '↗'}</div><div className="portfolio-item-body"><div className="portfolio-item-heading"><div><span className="eyebrow">{item.organization || item.issuing_organization || item.role || item.employment_type || RESOURCE_TITLES[kind]}</span><h3>{item.title || item.name || item.job_title || item.role}</h3></div><button className="icon-button" title="Delete entry" aria-label={`Delete ${item.title || item.name || item.job_title || item.role}`} onClick={() => removeItem(item)}>×</button></div><p>{item.description || item.technologies || item.credential_id || 'Add a description to share more about this experience.'}</p><div className="portfolio-meta">{item.start_date || item.issue_date || ''}{item.end_date ? ` — ${item.end_date}` : ''}{item.skills?.length ? ` · ${item.skills.map((skill) => skill.name).join(', ')}` : ''}</div>{kind === 'projects' && <div className="portfolio-links">{item.project_url && <a href={normalizeExternalUrl(item.project_url)} target="_blank" rel="noopener noreferrer">Open project ↗</a>}{item.github_url && <a href={normalizeExternalUrl(item.github_url)} target="_blank" rel="noopener noreferrer">View GitHub ↗</a>}</div>}</div></article>) : <EmptyState icon="▣" title={`Your ${RESOURCE_TITLES[kind].toLowerCase()} will show here`}>Add an entry using the form. Keep it specific and connect it to the skills you want to demonstrate.</EmptyState>}</section></div>
   </div>;
 }
 
 function portfolioFields(kind) {
-  if (kind === 'projects') return [{ name: 'title', label: 'Project title', required: true }, { name: 'role', label: 'Your role' }, { name: 'technologies', label: 'Technologies' }, { name: 'project_url', label: 'Project URL', type: 'url' }, { name: 'github_url', label: 'GitHub URL', type: 'url' }, { name: 'description', label: 'Description', type: 'textarea' }];
+  if (kind === 'projects') return [{ name: 'title', label: 'Project title', required: true }, { name: 'role', label: 'Your role' }, { name: 'technologies', label: 'Technologies' }, { name: 'project_url', label: 'Project URL', placeholder: 'https://…' }, { name: 'github_url', label: 'GitHub URL', placeholder: 'https://…' }, { name: 'description', label: 'Description', type: 'textarea' }];
   if (kind === 'certifications') return [{ name: 'name', label: 'Certification name', required: true }, { name: 'issuing_organization', label: 'Issuing organization', required: true }, { name: 'issue_date', label: 'Issue date', type: 'date', required: true }, { name: 'expiry_date', label: 'Expiry date', type: 'date' }, { name: 'credential_id', label: 'Credential ID' }, { name: 'description', label: 'Description', type: 'textarea' }];
   if (kind === 'experience') return [{ name: 'organization', label: 'Organization', required: true }, { name: 'job_title', label: 'Job title', required: true }, { name: 'employment_type', label: 'Employment type', options: ['FULL_TIME', 'PART_TIME', 'FREELANCE', 'INTERNSHIP', 'OTHER'] }, { name: 'location', label: 'Location' }, { name: 'start_date', label: 'Start date', type: 'date', required: true }, { name: 'end_date', label: 'End date', type: 'date' }, { name: 'description', label: 'Description', type: 'textarea' }];
   return [{ name: 'organization', label: 'Organization', required: true }, { name: 'role', label: 'Role', required: true }, { name: 'start_date', label: 'Start date', type: 'date', required: true }, { name: 'end_date', label: 'End date', type: 'date' }, { name: 'internship_type', label: 'Internship type', options: ['SUMMER', 'WINTER', 'PART_TIME', 'FULL_TIME', 'REMOTE', 'OTHER'] }, { name: 'status', label: 'Status', options: ['COMPLETED', 'ONGOING', 'PLANNED', 'CANCELLED'] }, { name: 'description', label: 'Description', type: 'textarea' }];
