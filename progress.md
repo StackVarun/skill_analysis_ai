@@ -602,3 +602,10 @@ Do not expose local AI runtime configuration or model details unnecessarily to u
 Phase 4B frontend is implemented. The frontend test suite passes (9 tests), and the Vite production build succeeds. Responsive tablet/mobile breakpoints have regression coverage. See `frontend/README.md` for setup and test commands.
 
 Do not begin Phase 5 or industry-specific features until explicitly instructed.\n
+## Phase 5A / 5B / 6 — integration (2026-09-29)
+
+- Added company profile, industry job/internship postings, skills and weights, student applications and tracking, candidate match details, ownership checks, shortlist actions, and industry dashboard.
+- Candidate matching reuses Phase 3 `analyze_role`; no second numeric scoring algorithm.
+- Added faculty profile, opportunity types, faculty applications and owner shortlisting; institution aggregate analytics scoped to a provisioned institution; student digital skill passport.
+- Added role-aware React screens, migration, demo seed, and setup instructions.
+- Verification: full backend suite, frontend tests and production build, migration on clean SQLite database. See root README for demo flow and limitations.

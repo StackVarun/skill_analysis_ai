@@ -30,7 +30,7 @@ export function AuthProvider({ children }) {
     setUser(response.user);
   };
   const login = async (credentials) => acceptSession(await api.post('/auth/login', credentials));
-  const register = async (details) => acceptSession(await api.post('/auth/register', { ...details, role: 'STUDENT' }));
+  const register = async (details) => acceptSession(await api.post('/auth/register', { ...details, role: details.role || 'STUDENT' }));
 
   const value = useMemo(() => ({ user, loading, login, register, logout }), [user, loading, logout]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
