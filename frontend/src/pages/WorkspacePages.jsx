@@ -56,7 +56,7 @@ export function DashboardPage() {
   }, [targetRoleId]);
   const { data, loading, error, refresh } = useResource(load, [load]);
   useEffect(() => {
-    if (data?.chosen && String(data.chosen.id) !== String(targetRoleId)) setTargetRoleId(String(data.chosen.id));
+    if (!targetRoleId && data?.chosen) setTargetRoleId(String(data.chosen.id));
   }, [data?.chosen?.id, targetRoleId, setTargetRoleId]);
   if (loading) return <Loading />;
   if (!data) return <ErrorNotice onRetry={refresh}>{error}</ErrorNotice>;
@@ -113,7 +113,10 @@ export function ProfilePage() {
   useEffect(() => { if (data) setForm({ ...EMPTY_PROFILE, ...data }); }, [data]);
   async function save(event) {
     event.preventDefault(); setBusy(true); setNotice(''); setFailure('');
-    const payload = { ...form, graduation_year: form.graduation_year ? Number(form.graduation_year) : null, cgpa: form.cgpa ? Number(form.cgpa) : null };
+    const allowedFields = [...PROFILE_FIELDS.map(([name]) => name), 'bio'];
+    const payload = Object.fromEntries(allowedFields.map((key) => [key, form[key] ?? null]));
+    payload.graduation_year = form.graduation_year ? Number(form.graduation_year) : null;
+    payload.cgpa = form.cgpa ? Number(form.cgpa) : null;
     Object.keys(payload).forEach((key) => { if (payload[key] === '') payload[key] = null; });
     try { await api.put('/students/profile', payload); setNotice('Your profile has been saved.'); await refresh(); }
     catch (reason) { setFailure(friendlyError(reason)); } finally { setBusy(false); }
