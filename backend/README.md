@@ -249,3 +249,86 @@ ollama run qwen2.5:1.5b-instruct-q5_0
 Set `LOCAL_AI_BASE_URL`, `LOCAL_AI_MODEL`, and `LOCAL_AI_TIMEOUT_SECONDS` in the environment to change the local server, model, or timeout. Flask startup never loads or requires the model. If the runtime/model is missing, fails, times out, returns malformed output, or returns output that fails validation, the endpoint reports `status: "fallback"` and provides a deterministic catalog/Phase 3 based result when possible.
 
 Resume extraction only returns catalog skills supported by source text, labels them as unverified suggestions, and never writes them to student skills. Normalization suggestions must resolve to an existing skill. Gap explanations and roadmaps consume the Phase 3 result; the service preserves the numeric scores, gaps, and role match and does not ask the model to compute them. Unit and API tests mock the adapter and do not download a model.
+
+## Phase 5A: industry and opportunities
+
+An INDUSTRY user's existing `User` identity and one owned `CompanyProfile` form
+its industry profile. Company fields are `name`, `website`, `description`, and
+`location`. Save/read them with `PUT/GET /api/industry/company`.
+
+| Endpoint | Access and behavior |
+| --- | --- |
+| `GET /api/opportunities` | STUDENT: open postings; INDUSTRY: own postings, including closed ones |
+| `POST /api/opportunities` | INDUSTRY with a company profile: create a posting |
+| `GET /api/opportunities/:id` | STUDENT: open posting; INDUSTRY: own posting |
+| `PUT /api/opportunities/:id` | Owning INDUSTRY: edit fields and replace skill requirements |
+| `DELETE /api/opportunities/:id` | Owning INDUSTRY: close posting, preserving applications |
+| `POST /api/opportunities/:id/apply` | STUDENT with a profile: apply once |
+| `GET /api/applications/mine` | STUDENT: own application statuses and posting details |
+| `GET /api/opportunities/:id/applications` | Owning INDUSTRY: applicants, profiles and deterministic matches |
+| `GET /api/applications/:id` | Owning INDUSTRY: one candidate's profile and match details |
+| `POST /api/applications/:id/shortlist` | Owning INDUSTRY: shortlist an eligible application |
+| `PATCH /api/applications/:id/status` | Owning INDUSTRY: advance application status |
+| `GET /api/industry/summary` | INDUSTRY: own posting and application counts |
+
+All endpoints require JWT authentication. Faculty and institution accounts cannot
+access these APIs. Institutional aggregate analytics remain a separate API.
+Owner IDs, applicant IDs and scores are derived on the server, never accepted as
+posting inputs. Unknown input fields are rejected.
+
+Posting JSON example (replace the skill ID with a catalog ID and the deadline
+with a future date):
+
+```json
+{
+  "title": "Backend internship",
+  "description": "Build and test Python web services.",
+  "kind": "INTERNSHIP",
+  "location": "Chennai",
+  "employment_type": "FULL_TIME",
+  "eligibility": "CSE students graduating in 2029",
+  "deadline": "2027-06-30",
+  "stipend": "INR 15000/month",
+  "duration": "12 weeks",
+  "required_skills": [
+    {"skill_id": 1, "required_proficiency": 70, "weight": 2}
+  ]
+}
+```
+
+Use `kind: "JOB"` for job postings. Title, description, kind and at least one
+required skill are mandatory. Other fields are optional to preserve the existing
+frontend contract. Eligibility is recruiter-provided descriptive text, not an
+automated eligibility decision. Employment type is a bounded text field. Skill
+IDs must exist and be unique within a posting. Scores are finite numbers in
+0–100 and weights in 0.001–100. Blank titles/descriptions, past deadlines,
+malformed JSON and invalid requirements return 400 without changing the posting.
+Deadlines are inclusive, using the backend server's calendar date.
+
+Applications start at `APPLIED`. Valid forward transitions:
+
+- APPLIED → REVIEWING, SHORTLISTED, REJECTED
+- REVIEWING → SHORTLISTED, INTERVIEW, REJECTED
+- SHORTLISTED → INTERVIEW, OFFER, REJECTED
+- INTERVIEW → OFFER, REJECTED
+- OFFER and REJECTED are final; repeating the current status is idempotent.
+
+Duplicate applications return 409 and have a database unique constraint as a
+second guard against concurrent submissions. Closed/expired opportunities reject
+new applications; existing applications remain visible in student tracking.
+
+Matching uses a transient Role adapter and calls the existing
+`SkillIntelligenceService.analyze_role` exactly once per candidate. The response
+retains its `match_percentage`, weighted `required_skills`, `skill_gaps`, and
+`missing_skills`. `matching_skills` contains requirements with zero gap. Evidence
+includes stored titles, source URLs, verification labels and linked record IDs;
+relevant projects, experience and internships use existing skill associations.
+No Role records are created, and no AI service or second scoring formula is used.
+Matches are computed from the candidate's current data and current posting
+requirements, rather than a historical snapshot at application time.
+
+The existing migration `6a29c9a56b71` provides all Phase 5A tables. This completion
+adds no schema changes. From `backend/`, use `python -m flask --app run.py db upgrade`
+for databases that have not yet applied that migration. Run
+`python -m pytest tests/test_industry_opportunities.py -q` for targeted checks and
+`python -m pytest -q` for the full regression suite.

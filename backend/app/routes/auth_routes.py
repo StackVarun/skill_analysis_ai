@@ -18,6 +18,9 @@ def register():
     except ValidationError as err:
         return jsonify({"error": "Validation error", "messages": err.messages}), 400
 
+    if data.get("role") == "INSTITUTION":
+        return jsonify({"error": "Institution accounts require administrator provisioning"}), 403
+
     try:
         user = AuthService.register_user(
             email=data["email"],

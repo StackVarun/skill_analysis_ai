@@ -601,4 +601,77 @@ Do not expose local AI runtime configuration or model details unnecessarily to u
 
 Phase 4B frontend is implemented. The frontend test suite passes (9 tests), and the Vite production build succeeds. Responsive tablet/mobile breakpoints have regression coverage. See `frontend/README.md` for setup and test commands.
 
-Do not begin Phase 5 or industry-specific features until explicitly instructed.\n
+Phase 5 development was subsequently authorized; see the implementation records below.
+## Phase 5A / 5B / 6 — integration (2026-09-29)
+
+- Added company profile, industry job/internship postings, skills and weights, student applications and tracking, candidate match details, ownership checks, shortlist actions, and industry dashboard.
+- Candidate matching reuses Phase 3 `analyze_role`; no second numeric scoring algorithm.
+- Added faculty profile, opportunity types, faculty applications and owner shortlisting; institution aggregate analytics scoped to a provisioned institution; student digital skill passport.
+- Added role-aware React screens, migration, demo seed, and setup instructions.
+- Verification: full backend suite, frontend tests and production build, migration on clean SQLite database. See root README for demo flow and limitations.
+
+
+## Phase 5A — Industry and Opportunities backend (2026-09-30)
+
+Implementation completed on top of the existing Phase 5/6 integration.
+
+- [x] Industry identity reuses User; company profile reuses CompanyProfile.
+- [x] Job and internship CRUD with title, description, location, employment type,
+  skill requirements/weights, eligibility text, deadline, stipend and duration.
+- [x] Dedicated Marshmallow schemas with trimmed text, bounded fields, finite
+  score/weight validation, strict skill IDs and malformed JSON handling.
+- [x] Workflow business logic in OpportunityService; routes handle authentication,
+  role guards, validation and serialization.
+- [x] Students browse open postings, apply once and track only their applications.
+- [x] Industry users manage only their postings and inspect only their applicants.
+- [x] Candidate profiles include projects, certifications, experience and internships.
+- [x] Matching delegates to the Phase 3 analyze_role engine; no second algorithm,
+  numeric AI scoring, AI dependency or persisted duplicate Role records.
+- [x] Candidate matching exposes the Phase 3 overall percentage, contributing
+  skills, matching skills, gaps, stored evidence details and relevant projects.
+- [x] Shortlisting and status transitions preserve the existing application tracker.
+- [x] Closing a posting preserves application history; deadlines are inclusive.
+- [x] Duplicate-application unique constraint and transaction rollback handling.
+- [x] Tests for posting creation/editing, internships, validation, applications,
+  deadlines, authorization/ownership, matching equivalence, evidence and shortlisting.
+- [x] Backend API documentation updated in backend/README.md.
+
+No new database models or migrations were needed: migration 6a29c9a56b71 already
+provides the tables. Existing frontend routes and response keys remain compatible.
+The additional GET /api/applications/:id endpoint is restricted to the posting owner.
+Eligibility is descriptive text; matching is live against current student data.
+
+Verification: targeted Phase 5A and existing Phase 5/6 integration tests passed
+(34 tests). Full backend regression suite: **111 passed**. Existing warnings
+concern SQLAlchemy legacy APIs and test JWT key length; no tests failed.
+
+
+## Phase 5B — Industry frontend (2026-09-30)
+
+- [x] Replaced the basic industry screen with a role dashboard using existing
+  React routes and API contracts; backend source was not modified for this phase.
+- [x] Dashboard loads real industry summary, company profile, opportunities and
+  skill catalog data; active jobs, internships, applications and shortlist counts
+  are shown from `/industry/summary`.
+- [x] Company profile editor and job/internship creation form use existing APIs,
+  with dynamic required skills, proficiency targets, weights, eligibility and deadline.
+- [x] Posting list supports search, type filters, applicants, and closing postings.
+- [x] Applicant review uses server returned match percentages, skill requirements,
+  gaps and evidence. Candidate drawer displays profile links, skill profile,
+  projects, certifications and relevant experience.
+- [x] Shortlisting calls `/applications/:id/shortlist`; status changes call the
+  existing `/applications/:id/status` transition API.
+- [x] Responsive tablet/mobile layout and accessibility labels added.
+- [x] API integration tests cover summary loading, posting creation payload,
+  candidate detail and shortlisting; responsive CSS has regression coverage.
+
+Implementation uses the current React/Vite app and its shared SkillBridge design
+variables/components so the frontend can remain buildable without dependency
+changes. Tailwind CSS, shadcn/ui and Recharts are not installed in this project
+copy. Package installation could not be completed from the restricted npm
+registry environment; the opportunity distribution visualization is a small CSS
+chart based on live summary data. To adopt the specifically requested libraries,
+install them from a network-enabled environment and migrate these styles/chart.
+No fabricated candidate scores are present.
+
+Verification: **21 frontend tests passed**. Vite production build succeeded (52 modules). The test suite verifies API calls with mocked REST responses and checks the responsive CSS breakpoints; live browser/backend behavior still needs the local app running.

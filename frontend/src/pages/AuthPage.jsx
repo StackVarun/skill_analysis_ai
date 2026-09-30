@@ -8,7 +8,7 @@ export default function AuthPage({ mode }) {
   const { login, register } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [form, setForm] = useState({ email: '', password: '', first_name: '', last_name: '' });
+  const [form, setForm] = useState({ email: '', password: '', first_name: '', last_name: '', role: 'STUDENT' });
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const change = (event) => setForm({ ...form, [event.target.name]: event.target.value });
@@ -28,8 +28,9 @@ export default function AuthPage({ mode }) {
       {registering && <div className="form-row"><label>First name<input name="first_name" value={form.first_name} onChange={change} autoComplete="given-name" required maxLength={100} /></label><label>Last name<input name="last_name" value={form.last_name} onChange={change} autoComplete="family-name" required maxLength={100} /></label></div>}
       <label>Email address<input type="email" name="email" value={form.email} onChange={change} autoComplete="email" required maxLength={120} placeholder="you@example.com" /></label>
       <label>Password<input type="password" name="password" value={form.password} onChange={change} autoComplete={registering ? 'new-password' : 'current-password'} required minLength={registering ? 8 : undefined} maxLength={100} placeholder={registering ? 'At least 8 characters' : 'Enter your password'} /></label>
-      {registering && <p className="form-hint">Creating an account gives you a student workspace. Your password is sent securely to the SkillBridge backend.</p>}
-      <button className="button button-primary button-wide" disabled={busy}>{busy ? <><span className="button-spinner" />Working…</> : registering ? 'Create student account' : 'Sign in'}<span>→</span></button>
+      {registering && <label>Account type<select name="role" value={form.role} onChange={change}><option value="STUDENT">Student</option><option value="INDUSTRY">Industry</option><option value="ACADEMICIAN">Academician</option></select></label>}
+      {registering && <p className="form-hint">Your workspace is based on the account type you select. Your password is sent securely to the SkillBridge backend.</p>}
+      <button className="button button-primary button-wide" disabled={busy}>{busy ? <><span className="button-spinner" />Working…</> : registering ? form.role === 'STUDENT' ? 'Create student account' : 'Create account' : 'Sign in'}<span>→</span></button>
     </form><p className="auth-switch">{registering ? 'Already have an account?' : 'New to SkillBridge?'} <Link to={registering ? '/login' : '/register'}>{registering ? 'Sign in' : 'Create an account'}</Link></p><p className="auth-privacy">Your student information stays in your account.</p></div></section>
   </main>;
 }

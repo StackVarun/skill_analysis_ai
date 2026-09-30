@@ -101,6 +101,9 @@ def register_blueprints(app):
     from app.routes.resume_routes import resumes_bp
     from app.routes.skill_intelligence_routes import skill_intelligence_bp
     from app.routes.ai_routes import ai_bp
+    from app.routes.opportunity_routes import opportunity_bp
+    from app.routes.faculty_routes import faculty_bp
+    from app.routes.institution_routes import institution_bp
 
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
     app.register_blueprint(test_bp, url_prefix="/api/test")
@@ -115,3 +118,6 @@ def register_blueprints(app):
     app.register_blueprint(resumes_bp, url_prefix="/api")
     app.register_blueprint(skill_intelligence_bp, url_prefix="/api")
     app.register_blueprint(ai_bp, url_prefix="/api")
+    app.register_blueprint(opportunity_bp, url_prefix="/api")
+    app.register_blueprint(faculty_bp, url_prefix="/api")
+    app.register_blueprint(institution_bp, url_prefix="/api")

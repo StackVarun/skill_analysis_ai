@@ -14,3 +14,6 @@ from app.models.assessment import Assessment, AssessmentQuestion, AssessmentAtte
 from app.models.role import Role, RoleSkillRequirement
 
 __all__ = ["UserRole", "User", "StudentProfile", "Skill", "StudentSkill", "ProficiencyLevel", "Project", "project_skills", "Certification", "Experience", "EmploymentType", "experience_skills", "Internship", "InternshipType", "InternshipStatus", "internship_skills", "SkillEvidence", "EvidenceType", "VerificationStatus", "Resume", "ResumeStatus", "UPLOAD_FOLDER", "ALLOWED_EXTENSIONS", "MAX_FILE_SIZE", "Assessment", "AssessmentQuestion", "AssessmentAttempt", "AssessmentAnswer", "Role", "RoleSkillRequirement"]
+from app.models.opportunity import CompanyProfile, Opportunity, OpportunitySkill, OpportunityApplication
+from app.models.faculty import FacultyProfile, FacultyOpportunity, FacultyApplication
+from app.models.institution import InstitutionProfile

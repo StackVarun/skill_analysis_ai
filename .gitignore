@@ -53,7 +53,7 @@ frontend/dist/
 .env.*.local
 
 # Local AI / model artifacts
-models/
+/models/
 *.gguf
 *.bin
 *.safetensors
