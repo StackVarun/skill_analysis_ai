@@ -5,6 +5,7 @@ from app.models.student_profile import StudentProfile
 from app.models.skill import Skill
 from app.models.student_skill import StudentSkill, ProficiencyLevel
 from app.models.institution import InstitutionProfile
+from app.models.opportunity import CompanyProfile, Opportunity, OpportunityApplication
 
 def token(user):return {'Authorization':'Bearer '+create_access_token(identity=user)}
 
@@ -34,6 +35,14 @@ def test_industry_flow(client,app):
     assert client.post(f"/api/applications/{c['id']}/shortlist",headers=ot).status_code==403
     assert client.post(f"/api/applications/{c['id']}/shortlist",headers=em).json['status']=='SHORTLISTED'
     assert client.get('/api/applications/mine',headers=st).json[0]['status']=='SHORTLISTED'
+    assert client.patch(f"/api/applications/{c['id']}/status",headers=ot,json={'status':'INTERVIEW'}).status_code==403
+    changed=client.patch(f"/api/applications/{c['id']}/status",headers=em,json={'status':'INTERVIEW'})
+    assert changed.status_code==200 and changed.json['status']=='INTERVIEW'
+    offered=client.patch(f"/api/applications/{c['id']}/status",headers=em,json={'status':'OFFER'})
+    assert offered.status_code==200 and offered.json['status']=='OFFER'
+    assert client.get('/api/applications/mine',headers=st).json[0]['status']=='OFFER'
+    assert client.patch(f"/api/applications/{c['id']}/status",headers=em,json={'status':'REVIEWING'}).status_code==409
+    assert client.patch(f"/api/applications/{c['id']}/status",headers=em,json={'status':'UNKNOWN'}).status_code==400
     assert client.get('/api/passport/me',headers=st).json['student']['full_name']=='A Student'
 
 def test_faculty_analytics_scope(client,app):
@@ -56,3 +65,31 @@ def test_faculty_analytics_scope(client,app):
     result=client.get('/api/institution/analytics',headers=ia)
     assert result.status_code==200,result.json
     assert result.json['institution']=='Test University'
+
+def test_institution_application_outcomes_are_aggregate_and_scoped(client,app):
+    with app.app_context():
+        institution=User('outcomes-admin@example.com','password123','Test','Admin',role='INSTITUTION')
+        company_user=User('outcomes-company@example.com','password123','Northstar','Recruiter',role='INDUSTRY')
+        student=User('outcomes-student@example.com','password123','In','School')
+        student2=User('outcomes-student2@example.com','password123','Second','Student')
+        outsider=User('outcomes-outsider@example.com','password123','Out','School')
+        db.session.add_all([institution,company_user,student,student2,outsider]);db.session.flush()
+        db.session.add(InstitutionProfile(user_id=institution.id,name='Test University'))
+        company=CompanyProfile(user_id=company_user.id,name='Northstar Labs');db.session.add(company);db.session.flush()
+        job=Opportunity(company_id=company.id,title='Developer',description='Build software',kind='JOB');db.session.add(job);db.session.flush()
+        in_school=StudentProfile(user_id=student.id,full_name='In School',institution='Test University')
+        in_school2=StudentProfile(user_id=student2.id,full_name='Second Student',institution='Test University')
+        out_school=StudentProfile(user_id=outsider.id,full_name='Out School',institution='Other University')
+        db.session.add_all([in_school,in_school2,out_school]);db.session.flush()
+        db.session.add_all([
+            OpportunityApplication(opportunity_id=job.id,student_id=in_school.id,status='APPLIED'),
+            OpportunityApplication(opportunity_id=job.id,student_id=in_school2.id,status='OFFER'),
+            OpportunityApplication(opportunity_id=job.id,student_id=out_school.id,status='REJECTED'),
+        ])
+        db.session.commit();headers=token(institution)
+    result=client.get('/api/institution/analytics',headers=headers)
+    assert result.status_code==200,result.json
+    assert result.json['application_outcomes']=={
+        'applied':1,'reviewing':0,'shortlisted':0,'interview':0,'offer':1,'rejected':0
+    }
+    assert result.json['internship_applications']==0

@@ -7,7 +7,8 @@ import { AuthProvider, useAuth } from '../context/AuthContext';
 import AuthPage from '../pages/AuthPage';
 import ProtectedRoute from '../components/ProtectedRoute';
 import { AIStudioPage, AssessmentsPage, DashboardPage, ProfilePage, RolesPage, PortfolioPage } from '../pages/WorkspacePages';
-import { SkillPassport } from '../pages/AdditionalPages';
+import { SkillPassport, InstitutionWorkspace } from '../pages/AdditionalPages';
+import { IndustryWorkspace, StudentOpportunities } from '../pages/OpportunityPages';
 import { api, TOKEN_KEY } from '../services/api';
 
 function withAuth(children, initialEntries = ['/']) {
@@ -207,4 +208,120 @@ it('updates the authenticated display name as soon as the profile is saved', asy
   fireEvent.change(screen.getByLabelText('Full name'), { target: { value: 'New Name' } });
   fireEvent.click(screen.getByRole('button', { name: /save profile/i }));
   await waitFor(() => expect(screen.getByTestId('display-name')).toHaveTextContent('New Name'));
+});
+
+it('shows a student application progress tracker from the saved application status', async () => {
+  vi.spyOn(api, 'get').mockImplementation(async (path) => {
+    if (path === '/opportunities') return [];
+    if (path === '/applications/mine') return [{ id: 20, opportunity_id: 9, status: 'INTERVIEW', opportunity: { id: 9, title: 'Backend Intern', kind: 'INTERNSHIP', company: { name: 'Northstar Labs' } } }];
+    throw new Error(`Unexpected ${path}`);
+  });
+  withAuth(<StudentOpportunities />);
+  expect(await screen.findByText('Backend Intern')).toBeInTheDocument();
+  expect(screen.getByLabelText('Application status: Interview')).toBeInTheDocument();
+  expect(screen.getAllByText('Interview').length).toBeGreaterThan(0);
+});
+
+  it('lets an industry user advance an applicant through the status pipeline', async () => {
+  const applicant = { id: 30, status: 'APPLIED', student: { full_name: 'Mina Patel', degree: 'B.Tech', institution: 'North College' }, match: { match_percentage: 78, required_skills: [{ skill_id: 2, skill: 'Python', student_score: 80, required_score: 70 }], skill_gaps: [], relevant_projects: [], evidence: [] } };
+  vi.spyOn(api, 'get').mockImplementation(async (path) => {
+    if (path === '/industry/summary') return { jobs: 1, internships: 0, applications: 1, shortlisted: 0, offers: 0, rejected: 0 };
+    if (path === '/industry/company') return { id: 2, user_id: 5, name: 'Northstar Labs', website: '', description: '', location: 'Chennai' };
+    if (path === '/opportunities') return [{ id: 9, title: 'Backend Intern', kind: 'INTERNSHIP', is_active: true }];
+    if (path === '/skills') return [{ id: 2, name: 'Python' }];
+    if (path === '/opportunities/9/applications') return [applicant];
+    throw new Error(`Unexpected ${path}`);
+  });
+  vi.spyOn(api, 'patch').mockImplementation(async (_path, body) => ({ ...applicant, status: body.status }));
+  withAuth(<IndustryWorkspace />);
+  fireEvent.click(await screen.findByRole('button', { name: 'View applicants' }));
+  const status = await screen.findByLabelText('Update status for Mina Patel');
+  fireEvent.change(status, { target: { value: 'REVIEWING' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Update' }));
+  await waitFor(() => expect(api.patch).toHaveBeenCalledWith('/applications/30/status', { status: 'REVIEWING' }));
+    expect(await screen.findByText('Reviewing', { selector: 'strong' })).toBeInTheDocument();
+  });
+
+  it('loads industry dashboard metrics and opportunity data from the existing APIs', async () => {
+    vi.spyOn(api, 'get').mockImplementation(async (path) => {
+      if (path === '/industry/summary') return { jobs: 3, internships: 2, applications: 14, shortlisted: 4 };
+      if (path === '/industry/company') return { id: 2, name: 'Northstar Labs', website: '', description: '', location: 'Chennai' };
+      if (path === '/opportunities') return [{ id: 9, title: 'Backend Engineer', kind: 'JOB', location: 'Chennai', is_active: true, required_skills: [{ skill_id: 2, skill: 'Python', weight: 2, required_proficiency: 70 }] }];
+      if (path === '/skills') return [{ id: 2, name: 'Python' }];
+      throw new Error(`Unexpected ${path}`);
+    });
+    withAuth(<IndustryWorkspace />);
+    expect(await screen.findByRole('heading', { name: 'Find the right talent' })).toBeInTheDocument();
+    expect(screen.getByText('Active jobs').closest('.industry-metric').querySelector('strong')).toHaveTextContent('3');
+    expect(screen.getByText('Active internships').closest('.industry-metric').querySelector('strong')).toHaveTextContent('2');
+    expect(screen.getByText('Applications', { selector: '.industry-metric-top span' }).closest('.industry-metric').querySelector('strong')).toHaveTextContent('14');
+    expect(screen.getByText('Shortlisted').closest('.industry-metric').querySelector('strong')).toHaveTextContent('4');
+    fireEvent.click(await screen.findByRole('button', { name: 'View applicants' }));
+    await waitFor(() => expect(api.get).toHaveBeenCalledWith('/opportunities/9/applications'));
+  });
+
+  it('creates a posting with selected skill and its weight through the existing API', async () => {
+    vi.spyOn(api, 'get').mockImplementation(async (path) => {
+      if (path === '/industry/summary') return { jobs: 0, internships: 0, applications: 0, shortlisted: 0 };
+      if (path === '/industry/company') return { id: 2, name: 'Northstar Labs', website: '', description: '', location: 'Chennai' };
+      if (path === '/opportunities') return [];
+      if (path === '/skills') return [{ id: 2, name: 'Python' }, { id: 3, name: 'SQL' }];
+      throw new Error(`Unexpected ${path}`);
+    });
+    vi.spyOn(api, 'post').mockResolvedValue({ id: 10 });
+    withAuth(<IndustryWorkspace />);
+    fireEvent.change(await screen.findByLabelText('Title'), { target: { value: 'Platform Engineer' } });
+    fireEvent.change(screen.getByLabelText('Description'), { target: { value: 'Build reliable backend services' } });
+    await waitFor(() => expect(screen.getByRole('button', { name: /add a required skill/i })).toBeEnabled());
+    fireEvent.click(screen.getByRole('button', { name: /add a required skill/i }));
+    await waitFor(() => expect(screen.getByRole('button', { name: /publish opportunity/i })).toBeEnabled());
+    fireEvent.submit(screen.getByRole('button', { name: /publish opportunity/i }).closest('form'));
+    await waitFor(() => expect(api.post).toHaveBeenCalledWith('/opportunities', expect.objectContaining({
+      title: 'Platform Engineer', kind: 'JOB', deadline: null,
+      required_skills: [{ skill_id: 2, required_proficiency: 70, weight: 1 }],
+    })));
+  });
+
+  it('opens a candidate profile from API data and shortlists using the existing endpoint', async () => {
+    const applicant = {
+      id: 30, status: 'APPLIED', student: { full_name: 'Mina Patel', degree: 'B.Tech', branch: 'CSE', institution: 'North College', github_url: 'https://github.com/mina' },
+      certifications: [{ id: 4, name: 'Cloud Fundamentals' }], experience: [],
+      match: { match_percentage: 78, required_skills: [{ skill_id: 2, skill: 'Python', student_score: 80, required_score: 70, gap: 0 }], matching_skills: [{ skill_id: 2, skill: 'Python', gap: 0 }], skill_gaps: [], missing_skills: [], relevant_projects: [{ id: 7, title: 'Course API', github_url: 'https://github.com/mina/api', skills: [{ id: 2, name: 'Python' }] }], evidence: [{ id: 5, skill_id: 2, skill_name: 'Python', evidence_title: 'API project evidence', source_url: 'https://example.com/evidence', verification_status: 'VERIFIED' }] },
+    };
+    vi.spyOn(api, 'get').mockImplementation(async (path) => {
+      if (path === '/industry/summary') return { jobs: 1, internships: 0, applications: 1, shortlisted: 0 };
+      if (path === '/industry/company') return { name: 'Northstar Labs' };
+      if (path === '/opportunities') return [{ id: 9, title: 'Backend Engineer', kind: 'JOB', is_active: true, required_skills: [] }];
+      if (path === '/skills') return [];
+      if (path === '/opportunities/9/applications') return [applicant];
+      throw new Error(`Unexpected ${path}`);
+    });
+    vi.spyOn(api, 'post').mockResolvedValue({ ...applicant, status: 'SHORTLISTED' });
+    withAuth(<IndustryWorkspace />);
+    fireEvent.click(await screen.findByRole('button', { name: 'View applicants' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'View profile' }));
+    expect(await screen.findByRole('heading', { name: 'Mina Patel' })).toBeInTheDocument();
+    expect(screen.getAllByText('78%').length).toBeGreaterThan(0);
+    expect(screen.getByText('Course API')).toBeInTheDocument();
+    expect(screen.getByText('Cloud Fundamentals')).toBeInTheDocument();
+    expect(screen.getByText('API project evidence')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /shortlist/i }));
+    await waitFor(() => expect(api.post).toHaveBeenCalledWith('/applications/30/shortlist', {}));
+  });
+
+  it('provides responsive industry layout rules for tablet and mobile widths', () => {
+    const css = readFileSync('src/styles.css', 'utf8');
+    expect(css).toContain('.industry-metric-grid{display:grid;grid-template-columns:repeat(4');
+    expect(css).toContain('@media(max-width:820px){.industry-dashboard-grid,.industry-lower-grid{grid-template-columns:1fr}');
+    expect(css).toContain('@media(max-width:580px){.industry-workspace{gap:13px}');
+    expect(css).toContain('.industry-candidate-drawer{width:min(520px,100%)');
+  });
+
+it('shows institution level application outcome counts', async () => {
+  vi.spyOn(api, 'get').mockResolvedValue({ institution: 'North College', student_count: 4, placement_readiness: 52.5, internship_applications: 3, application_outcomes: { applied: 2, reviewing: 1, shortlisted: 1, interview: 0, offer: 1, rejected: 0 }, common_skill_gaps: [], skill_demand: [], average_skill_scores: [] });
+  withAuth(<InstitutionWorkspace />);
+  expect(await screen.findByRole('heading', { name: 'Application outcomes' })).toBeInTheDocument();
+  expect(screen.getByText('North College')).toBeInTheDocument();
+  expect(screen.getByText('Interview', { selector: 'small' }).nextElementSibling).toHaveTextContent('0');
+  expect(screen.getAllByText('1').length).toBeGreaterThan(0);
 });

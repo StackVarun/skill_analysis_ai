@@ -1,6 +1,16 @@
 from datetime import datetime, timezone
 from app.extensions import db
 
+APPLICATION_STATUSES = ('APPLIED', 'REVIEWING', 'SHORTLISTED', 'INTERVIEW', 'OFFER', 'REJECTED')
+APPLICATION_TRANSITIONS = {
+    'APPLIED': ('REVIEWING', 'SHORTLISTED', 'REJECTED'),
+    'REVIEWING': ('SHORTLISTED', 'INTERVIEW', 'REJECTED'),
+    'SHORTLISTED': ('INTERVIEW', 'OFFER', 'REJECTED'),
+    'INTERVIEW': ('OFFER', 'REJECTED'),
+    'OFFER': (),
+    'REJECTED': (),
+}
+
 class CompanyProfile(db.Model):
     __tablename__ = 'company_profiles'
     id = db.Column(db.Integer, primary_key=True)

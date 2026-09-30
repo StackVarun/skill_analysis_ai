@@ -5,7 +5,7 @@ from sqlalchemy import func
 from flask_jwt_extended import get_current_user
 from app.utils.decorators import roles_required
 from app.models.student_profile import StudentProfile
-from app.models.opportunity import Opportunity, OpportunityApplication
+from app.models.opportunity import Opportunity, OpportunityApplication, APPLICATION_STATUSES
 from app.models.role import Role
 from app.models.assessment import AssessmentAttempt
 from app.models.skill import Skill
@@ -53,10 +53,13 @@ def analytics():
         if not is_open(post):continue
         for r in post.requirements:demand[r.skill.name]+=r.weight
     apps=OpportunityApplication.query.all()
-    participation=sum(a.student_id in ids and a.opportunity.kind=='INTERNSHIP' for a in apps)
+    institution_apps=[a for a in apps if a.student_id in ids]
+    participation=sum(a.opportunity.kind=='INTERNSHIP' for a in institution_apps)
+    application_outcomes={status.lower():sum(a.status==status for a in institution_apps) for status in APPLICATION_STATUSES}
     readiness=round(sum(r['match_percentage'] for r in role_rows)/len(role_rows),2) if role_rows else 0
     return jsonify({'institution':institution,'student_count':len(students),
                     'placement_readiness':readiness,'internship_applications':participation,
+                    'application_outcomes':application_outcomes,
                     'common_skill_gaps':[{'skill':name,'count':count} for name,count in gaps.most_common(10)],
                     'skill_demand':[{'skill':name,'weight':weight} for name,weight in sorted(demand.items(),key=lambda row:-row[1])[:10]],
                     'average_skill_scores':[{'skill':name,'score':round(sum(values)/len(values),2)} for name,values in sorted(_group_scores(scores).items())]})

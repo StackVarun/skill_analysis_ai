@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api, friendlyError } from '../services/api';
+import { IndustryWorkspace } from './IndustryWorkspace';
+export { IndustryWorkspace };
 
 function useLoad(path) {
   const [data,setData]=useState(null),[error,setError]=useState(''),[busy,setBusy]=useState(true);
@@ -8,28 +10,27 @@ function useLoad(path) {
 }
 const Notice=({error})=>error?<p role="alert" className="notice notice-error">{error}</p>:null;
 const Match=({match})=>match?<div><strong>{match.match_percentage}% match</strong><div className="portal-tags">{match.required_skills.map(s=><span key={s.skill_id}>{s.skill}: {s.student_score}/{s.required_score}</span>)}</div>{match.skill_gaps.length>0&&<small>Gaps: {match.skill_gaps.map(s=>s.skill).join(', ')}</small>}</div>:null;
+const APPLICATION_LABELS={APPLIED:'Applied',REVIEWING:'Reviewing',SHORTLISTED:'Shortlisted',INTERVIEW:'Interview',OFFER:'Offer',REJECTED:'Rejected'};
+const APPLICATION_NEXT={APPLIED:['REVIEWING','SHORTLISTED','REJECTED'],REVIEWING:['SHORTLISTED','INTERVIEW','REJECTED'],SHORTLISTED:['INTERVIEW','OFFER','REJECTED'],INTERVIEW:['OFFER','REJECTED'],OFFER:[],REJECTED:[]};
+function ApplicationStatusControl({application,onUpdate}){
+  const [next,setNext]=useState(application.status);
+  useEffect(()=>setNext(application.status),[application.status]);
+  const choices=APPLICATION_NEXT[application.status]||[];
+  return <div className="application-status-control"><label>Status<select aria-label={`Update status for ${application.student.full_name||'applicant'}`} value={next} onChange={e=>setNext(e.target.value)}><option value={application.status}>{APPLICATION_LABELS[application.status]||application.status}</option>{choices.map(status=><option value={status} key={status}>{APPLICATION_LABELS[status]}</option>)}</select></label><button className="button button-secondary" disabled={next===application.status} onClick={()=>onUpdate(application.id,next)}>Update</button></div>;
+}
+function ApplicationTracker({status}){
+  const steps=['APPLIED','REVIEWING','INTERVIEW','OFFER'];
+  if(status==='REJECTED')return <div className="application-tracker rejected"><strong>Application rejected</strong><small>The employer has closed this application.</small></div>;
+  const activeIndex=Math.max(0,steps.indexOf(status==='SHORTLISTED'?'REVIEWING':status));
+  return <div className="application-tracker" aria-label={`Application status: ${APPLICATION_LABELS[status]||status}`}><div className="application-tracker-heading"><span>Application status</span><strong>{APPLICATION_LABELS[status]||status}</strong></div><ol>{steps.map((step,index)=><li className={index<=activeIndex?'complete':''} key={step}><span>{index<activeIndex?'✓':index+1}</span><small>{APPLICATION_LABELS[step]}</small></li>)}</ol></div>;
+}
 
 export function StudentOpportunities(){
   const {data,error,busy,refresh}=useLoad('/opportunities');const applications=useLoad('/applications/mine');const [message,setMessage]=useState('');
   async function apply(id){try{await api.post(`/opportunities/${id}/apply`,{});setMessage('Application submitted.');applications.refresh();refresh();}catch(e){setMessage(friendlyError(e));}}
   const applied=new Map((applications.data||[]).map(a=>[a.opportunity_id,a.status]));
-  return <section className="portal-page"><h2>Jobs & internships</h2><p>Explore open opportunities and track your applications.</p><Notice error={error}/>{message&&<p role="status">{message}</p>}{busy?<p>Loading…</p>:(data||[]).length===0?<p>No open opportunities yet.</p>:<div className="portal-grid">{data.map(p=><article className="surface-card portal-card" key={p.id}><small>{p.kind} · {p.company.name}</small><h3>{p.title}</h3><p>{p.description}</p><div className="portal-tags">{p.required_skills.map(s=><span key={s.skill_id}>{s.skill}</span>)}</div><p>{p.location||'Location flexible'} · Deadline {p.deadline||'Open'}</p><button className="button button-primary" disabled={!!applied.get(p.id)} onClick={()=>apply(p.id)}>{applied.get(p.id)||'Apply'}</button></article>)}</div>}
-  <h3>My applications</h3>{(applications.data||[]).map(a=><p key={a.id}>{a.opportunity.title}: <strong>{a.status}</strong></p>)}</section>;
+  return <section className="portal-page"><h2>Jobs & internships</h2><p>Explore open opportunities and track your applications.</p><Notice error={error}/>{message&&<p role="status">{message}</p>}{busy?<p>Loading…</p>:(data||[]).length===0?<p>No open opportunities yet.</p>:<div className="portal-grid">{data.map(p=><article className="surface-card portal-card" key={p.id}><small>{p.kind} · {p.company.name}</small><h3>{p.title}</h3><p>{p.description}</p><div className="portal-tags">{p.required_skills.map(s=><span key={s.skill_id}>{s.skill}</span>)}</div><p>{p.location||'Location flexible'} · Deadline {p.deadline||'Open'}</p><button className="button button-primary" disabled={!!applied.get(p.id)} onClick={()=>apply(p.id)}>{APPLICATION_LABELS[applied.get(p.id)]||'Apply'}</button></article>)}</div>}
+  <h3>My applications</h3>{(applications.data||[]).map(a=><article className="surface-card application-record" key={a.id}><div><h4>{a.opportunity.title}</h4><small>{a.opportunity.company.name} · {a.opportunity.kind}</small></div><ApplicationTracker status={a.status}/></article>)}</section>;
 }
 
-const emptyPost={title:'',description:'',kind:'INTERNSHIP',location:'',employment_type:'',eligibility:'',deadline:'',stipend:'',duration:'',required_skills:[]};
-export function IndustryWorkspace(){
-  const summary=useLoad('/industry/summary'),firm=useLoad('/industry/company'),posts=useLoad('/opportunities'),skills=useLoad('/skills');
-  const [company,setCompany]=useState({name:'',website:'',description:'',location:''}),[form,setForm]=useState(emptyPost),[error,setError]=useState(''),[selected,setSelected]=useState(null),[candidates,setCandidates]=useState([]);
-  useEffect(()=>{if(firm.data)setCompany(firm.data);},[firm.data]);
-  async function saveCompany(e){e.preventDefault();try{await api.put('/industry/company',company);firm.refresh();setError('');}catch(err){setError(friendlyError(err));}}
-  async function create(e){e.preventDefault();try{await api.post('/opportunities',{...form,deadline:form.deadline||null});setForm(emptyPost);posts.refresh();summary.refresh();setError('');}catch(err){setError(friendlyError(err));}}
-  async function showCandidates(id){try{setCandidates(await api.get(`/opportunities/${id}/applications`));setSelected(id);}catch(err){setError(friendlyError(err));}}
-  async function shortlist(id){try{await api.post(`/applications/${id}/shortlist`,{});showCandidates(selected);summary.refresh();}catch(err){setError(friendlyError(err));}}
-  const metrics=summary.data||{};
-  return <section className="portal-page"><h2>Industry workspace</h2><Notice error={error||summary.error||posts.error}/><div className="portal-metrics">{[['Active jobs',metrics.jobs],['Internships',metrics.internships],['Applications',metrics.applications],['Shortlisted',metrics.shortlisted]].map(([label,value])=><article className="surface-card" key={label}><small>{label}</small><strong>{value??'…'}</strong></article>)}</div>
-  <div className="portal-grid"><form className="surface-card portal-form" onSubmit={saveCompany}><h3>Company profile</h3>{['name','website','location','description'].map(k=><label key={k}>{k}<input required={k==='name'} value={company[k]||''} onChange={e=>setCompany({...company,[k]:e.target.value})}/></label>)}<button className="button button-primary">Save company</button></form>
-  <form className="surface-card portal-form" onSubmit={create}><h3>Post an opportunity</h3><label>Type<select value={form.kind} onChange={e=>setForm({...form,kind:e.target.value})}><option value="INTERNSHIP">Internship</option><option value="JOB">Job</option></select></label>{['title','description','location','employment_type','eligibility','deadline','stipend','duration'].map(k=><label key={k}>{k}<input type={k==='deadline'?'date':'text'} required={k==='title'||k==='description'} value={form[k]} onChange={e=>setForm({...form,[k]:e.target.value})}/></label>)}<h4>Required skills</h4>{form.required_skills.map((r,i)=><div className="portal-skill-row" key={i}><select aria-label="Skill" value={r.skill_id} onChange={e=>setForm({...form,required_skills:form.required_skills.map((v,j)=>j===i?{...v,skill_id:Number(e.target.value)}:v)})}>{(skills.data||[]).map(s=><option value={s.id} key={s.id}>{s.name}</option>)}</select><input aria-label="Required score" type="number" min="0" max="100" value={r.required_proficiency} onChange={e=>setForm({...form,required_skills:form.required_skills.map((v,j)=>j===i?{...v,required_proficiency:Number(e.target.value)}:v)})}/><input aria-label="Weight" type="number" min="0.1" step="0.1" value={r.weight} onChange={e=>setForm({...form,required_skills:form.required_skills.map((v,j)=>j===i?{...v,weight:Number(e.target.value)}:v)})}/><button type="button" onClick={()=>setForm({...form,required_skills:form.required_skills.filter((_,j)=>j!==i)})}>Remove</button></div>)}<button type="button" disabled={!skills.data?.length} onClick={()=>setForm({...form,required_skills:[...form.required_skills,{skill_id:skills.data[0].id,required_proficiency:70,weight:1}]})}>Add skill</button><button className="button button-primary" disabled={!firm.data||!form.required_skills.length}>Publish</button></form></div>
-  <h3>My postings</h3>{(posts.data||[]).length===0&&<p>No postings yet.</p>}{(posts.data||[]).map(p=><article className="surface-card portal-card" key={p.id}><strong>{p.title}</strong> · {p.kind} · {p.is_active?'Active':'Closed'} <button onClick={()=>showCandidates(p.id)}>View applicants</button>{p.is_active&&<button onClick={async()=>{await api.delete(`/opportunities/${p.id}`);posts.refresh();summary.refresh();}}>Close</button>}</article>)}
-  {selected&&<div className="surface-card portal-card"><h3>Applicants</h3>{candidates.length===0?<p>No applications yet.</p>:candidates.map(a=><article key={a.id}><h4>{a.student.full_name||'Student'}</h4><p>{a.student.degree} · {a.student.institution}</p><Match match={a.match}/><p>Projects: {a.match.relevant_projects.map(p=>p.title).join(', ')||'None linked'}</p><p>Evidence: {a.match.evidence.length} items · {a.status}</p><button disabled={a.status==='SHORTLISTED'} onClick={()=>shortlist(a.id)}>Shortlist</button></article>)}</div>}</section>;
-}
+

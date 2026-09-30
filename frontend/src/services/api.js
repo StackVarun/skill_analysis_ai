@@ -36,6 +36,7 @@ export const api = {
   get: (path) => send(path),
   post: (path, data) => send(path, { method: 'POST', body: JSON.stringify(data) }),
   put: (path, data) => send(path, { method: 'PUT', body: JSON.stringify(data) }),
+  patch: (path, data) => send(path, { method: 'PATCH', body: JSON.stringify(data) }),
   delete: (path) => send(path, { method: 'DELETE' }),
   upload: (path, formData) => send(path, { method: 'POST', body: formData }),
 };
