@@ -11,7 +11,8 @@ export class ApiError extends Error {
 }
 
 async function send(path, options = {}) {
-  const token = localStorage.getItem(TOKEN_KEY);
+  const isAuthRequest = ['/auth/login', '/auth/register'].includes(path);
+  const token = isAuthRequest ? null : localStorage.getItem(TOKEN_KEY);
   const headers = new Headers(options.headers || {});
   if (token) headers.set('Authorization', `Bearer ${token}`);
   if (options.body && !(options.body instanceof FormData) && !headers.has('Content-Type')) {
@@ -23,10 +24,12 @@ async function send(path, options = {}) {
   } catch {
     throw new ApiError('Unable to reach SkillBridge. Check that the backend is running.', 0);
   }
-  if (response.status === 401) window.dispatchEvent(new CustomEvent('skillbridge:unauthorized'));
+  if (response.status === 401 && !isAuthRequest) window.dispatchEvent(new CustomEvent('skillbridge:unauthorized'));
   const payload = response.status === 204 ? null : await response.json().catch(() => null);
   if (!response.ok) {
-    const message = payload?.message || payload?.error || `Request failed (${response.status})`;
+    const message = payload?.message || payload?.error || (response.status === 403 && isAuthRequest
+      ? 'The API server refused the login request. Check the backend port and Vite proxy target; on macOS, AirPlay may occupy port 5000. Restart Flask and Vite after changing ports.'
+      : `Request failed (${response.status})`);
     throw new ApiError(message, response.status, payload);
   }
   return payload;

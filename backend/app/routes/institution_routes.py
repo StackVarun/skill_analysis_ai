@@ -21,7 +21,11 @@ def passport(student):
     roles.sort(key=lambda r:r['match_percentage'],reverse=True)
     openings=[{'opportunity':p.to_dict(),'match':match_candidate(p,student)} for p in Opportunity.query.all() if is_open(p)]
     openings.sort(key=lambda r:r['match']['match_percentage'],reverse=True)
-    return {'student':student.to_dict(),'skills':scores,
+    from app.services.faculty_support_service import endorsements
+    endorsement_data = endorsements(student.id)
+    for row in scores:
+        row["faculty_endorsed"] = row["skill_id"] in endorsement_data["skill_ids"]
+    return {'student':student.to_dict(),'skills':scores,'endorsements':endorsement_data,
             'projects':[p.to_dict() for p in student.projects],
             'certifications':[c.to_dict() for c in student.certifications],
             'experience':[e.to_dict() for e in student.experiences],

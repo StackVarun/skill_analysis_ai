@@ -40,7 +40,7 @@ function SkillRequirements({ skills, requiredSkills, setRequiredSkills }) {
     <div className="industry-requirement-head"><span>Skill</span><span>Target / 100</span><span>Weight</span><span /></div>
     {requiredSkills.map((requirement, index) => <div className="industry-requirement-row" key={`${index}-${requirement.skill_id}`}>
       <select aria-label={`Required skill ${index + 1}`} value={requirement.skill_id} onChange={event => update(index, { skill_id: Number(event.target.value) })} required>
-        {skills.map(skill => <option value={skill.id} key={skill.id}>{skill.name}</option>)}
+        {skills.map(skill => <option value={skill.id} key={skill.id} disabled={requiredSkills.some((item, i) => i !== index && item.skill_id === skill.id)}>{skill.name}</option>)}
       </select>
       <input aria-label={`${skills.find(skill => skill.id === requirement.skill_id)?.name || 'Skill'} target score`} type="number" min="0" max="100" step="1" value={requirement.required_proficiency} onChange={event => update(index, { required_proficiency: Number(event.target.value) })} required />
       <input aria-label={`${skills.find(skill => skill.id === requirement.skill_id)?.name || 'Skill'} weight`} type="number" min="0.001" max="100" step="0.1" value={requirement.weight} onChange={event => update(index, { weight: Number(event.target.value) })} required />
@@ -111,6 +111,8 @@ export function IndustryWorkspace() {
   const [query, setQuery] = useState('');
   const [kind, setKind] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [newSkill, setNewSkill] = useState('');
+  const [savingSkill, setSavingSkill] = useState(false);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -139,6 +141,23 @@ export function IndustryWorkspace() {
     try { const saved = await api.put('/industry/company', company); setCompany(saved); setMessage('Company profile saved.'); }
     catch (err) { setError(friendlyError(err)); }
     finally { setSaving(false); }
+  }
+
+  async function addCatalogSkill() {
+    const name = newSkill.trim();
+    if (!name || savingSkill) return;
+    setSavingSkill(true); setError(''); setMessage('');
+    try {
+      let skill = skills.find(item => item.name.toLowerCase() === name.toLowerCase());
+      if (!skill) {
+        skill = await api.post('/skills', { name, category: 'Technical' });
+        setSkills(items => [...items, skill].sort((a, b) => a.name.localeCompare(b.name)));
+      }
+      setForm(current => ({ ...current, required_skills: current.required_skills.some(item => item.skill_id === skill.id)
+        ? current.required_skills : [...current.required_skills, { skill_id: skill.id, required_proficiency: 70, weight: 1 }] }));
+      setNewSkill(''); setMessage(`${skill.name} added to required skills.`);
+    } catch (err) { setError(friendlyError(err)); }
+    finally { setSavingSkill(false); }
   }
 
   async function createOpportunity(event) {
@@ -178,7 +197,10 @@ export function IndustryWorkspace() {
     } catch (err) { setError(friendlyError(err)); }
   }
 
-  const filteredCandidates = candidates.filter(item => statusFilter === 'ALL' || item.status === statusFilter);
+  const rankedCandidates = [...candidates].sort((a, b) =>
+    (b.match?.match_percentage || 0) - (a.match?.match_percentage || 0) || a.id - b.id);
+  const filteredCandidates = rankedCandidates.filter(item => statusFilter === 'ALL' || item.status === statusFilter);
+  const ranks = new Map(rankedCandidates.map((item, index) => [item.id, index + 1]));
   const requirements = form.required_skills || [];
   return <div className="industry-workspace">
     <header className="industry-welcome"><div><span className="industry-kicker">INDUSTRY PORTAL</span><h1>Find the right talent</h1><p>Manage opportunities and review candidates against the skills that matter.</p></div><button className="industry-primary-button" onClick={() => document.getElementById('industry-create-opportunity')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>＋ Post an opportunity</button></header>
@@ -214,6 +236,7 @@ export function IndustryWorkspace() {
           <div className="industry-form-two"><label>Application deadline<input type="date" value={form.deadline} onChange={event => setForm({ ...form, deadline: event.target.value })} /></label>{form.kind === 'INTERNSHIP' && <label>Stipend<input maxLength="100" value={form.stipend} onChange={event => setForm({ ...form, stipend: event.target.value })} placeholder="Optional" /></label>}</div>
           {form.kind === 'INTERNSHIP' && <label>Duration<input maxLength="100" value={form.duration} onChange={event => setForm({ ...form, duration: event.target.value })} placeholder="e.g. 12 weeks" /></label>}
           <SkillRequirements skills={skills} requiredSkills={requirements} setRequiredSkills={next => setForm(current => ({ ...current, required_skills: typeof next === 'function' ? next(current.required_skills || []) : next }))} />
+          <div className="industry-catalog-create"><label>Missing a skill? Add it to the catalog<input aria-label="New catalog skill" maxLength="100" value={newSkill} onChange={event => setNewSkill(event.target.value)} placeholder="e.g. FastAPI" /></label><button type="button" className="industry-secondary-button" disabled={savingSkill || !newSkill.trim()} onClick={addCatalogSkill}>{savingSkill ? 'Adding…' : 'Add new skill'}</button></div>
           <button type="submit" className="industry-primary-button industry-publish-button" disabled={saving || !company.name || !requirements.length}>{saving ? 'Publishing…' : 'Publish opportunity'} <span>→</span></button>
           {!company.name && <small className="industry-validation">Save your company profile before publishing.</small>}
         </form>
@@ -230,15 +253,15 @@ export function IndustryWorkspace() {
       </Panel>
     </div>
 
-    <Panel className="industry-applications-panel"><div className="industry-section-heading"><div><span className="industry-kicker">CANDIDATE REVIEW</span><h2>{selectedOpportunity ? `Applicants · ${selectedOpportunity.title}` : 'Applications'}</h2><p>{selectedOpportunity ? 'Review match details, inspect candidate profiles and shortlist.' : 'Choose one of your postings above to review its applicants.'}</p></div>{selectedOpportunity && <button className="industry-text-button" onClick={() => { setSelectedOpportunity(null); setCandidates([]); }}>Clear selection</button>}</div>
-      {selectedOpportunity && <><div className="industry-application-toolbar"><span>{candidates.length} applicant{candidates.length === 1 ? '' : 's'}</span><select aria-label="Filter applications by status" value={statusFilter} onChange={event => setStatusFilter(event.target.value)}><option value="ALL">All statuses</option>{Object.entries(STATUS_LABELS).map(([key, label]) => <option value={key} key={key}>{label}</option>)}</select></div>
+    <Panel className="industry-applications-panel"><div className="industry-section-heading"><div><span className="industry-kicker">CANDIDATE REVIEW</span><h2>{selectedOpportunity ? `Applicants · ${selectedOpportunity.title}` : 'Applications'}</h2><p>{selectedOpportunity ? 'Ranked by weighted skill score, highest first. Compare targets and evidence before shortlisting.' : 'Choose one of your postings above to review its applicants.'}</p></div>{selectedOpportunity && <button className="industry-text-button" onClick={() => { setSelectedOpportunity(null); setCandidates([]); }}>Clear selection</button>}</div>
+      {selectedOpportunity && <><div className="industry-post-skill-tags" aria-label="Company skill requirements">{(selectedOpportunity.required_skills || []).map(skill => <span key={skill.skill_id}>{skill.skill}: target {skill.required_proficiency}/100 · weight {skill.weight}</span>)}</div><div className="industry-application-toolbar"><span>{candidates.length} applicant{candidates.length === 1 ? '' : 's'}</span><select aria-label="Filter applications by status" value={statusFilter} onChange={event => setStatusFilter(event.target.value)}><option value="ALL">All statuses</option>{Object.entries(STATUS_LABELS).map(([key, label]) => <option value={key} key={key}>{label}</option>)}</select></div>
         {loadingCandidates ? <p className="industry-empty-state">Loading candidate profiles and skill matches…</p> : filteredCandidates.length ? <div className="industry-applicants-list">{filteredCandidates.map(application => {
           const person = application.student || {}; const match = application.match || {};
           const matching = match.matching_skills || (match.required_skills || []).filter(skill => skill.gap === 0);
           const gaps = match.skill_gaps || [];
           return <article className="industry-applicant-row" key={application.id}>
-            <div className="industry-applicant-person"><div className="industry-avatar small-avatar">{(person.full_name || 'S').trim().slice(0, 1).toUpperCase()}</div><div><strong>{person.full_name || 'Student'}</strong><small>{[person.degree, person.institution].filter(Boolean).join(' · ') || 'Candidate profile'}</small></div></div>
-            <div className="industry-row-match"><strong>{Number.isFinite(match.match_percentage) ? `${match.match_percentage}%` : '—'}</strong><small>role match</small><div className="industry-score-track"><i style={{ width: `${Math.min(100, Math.max(0, match.match_percentage || 0))}%` }} /></div></div>
+            <div className="industry-applicant-person"><div className="industry-avatar small-avatar">{(person.full_name || 'S').trim().slice(0, 1).toUpperCase()}</div><div><strong>{person.full_name || 'Student'}</strong><small>Rank #{ranks.get(application.id)} by skill score</small><small>{[person.degree, person.institution].filter(Boolean).join(' · ') || 'Candidate profile'}</small></div></div>
+            <div className="industry-row-match"><strong>{Number.isFinite(match.match_percentage) ? `${match.match_percentage}%` : '—'}</strong><small>weighted skill score</small><div className="industry-score-track"><i style={{ width: `${Math.min(100, Math.max(0, match.match_percentage || 0))}%` }} /></div></div>
             <div className="industry-row-skills"><small>Matching skills</small><div>{matching.slice(0, 3).map(skill => <span key={skill.skill_id}>{skill.skill}</span>)}{!matching.length && <em>None yet</em>}</div></div>
             <div className="industry-row-gaps"><small>Skill gaps</small><div>{gaps.slice(0, 2).map(skill => <span key={skill.skill_id}>{skill.skill}</span>)}{!gaps.length && <em>None</em>}</div><small className="industry-evidence-summary">{match.evidence?.length || 0} evidence item{match.evidence?.length === 1 ? '' : 's'}</small></div>
             <div className="industry-row-actions"><span className={`industry-status-pill status-${application.status?.toLowerCase()}`}><strong>{STATUS_LABELS[application.status] || application.status}</strong></span><button className="industry-text-button" onClick={() => setCandidate(application)}>View profile</button>{application.status !== 'SHORTLISTED' && !['OFFER', 'REJECTED'].includes(application.status) && <button className="industry-shortlist-button" onClick={() => shortlist(application)}>☆ Shortlist</button>}</div>

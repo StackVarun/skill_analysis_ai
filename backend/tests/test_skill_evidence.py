@@ -91,14 +91,14 @@ class TestSkillEvidence:
                                 content_type="application/json")
         evidence_id = json.loads(create_resp.data)["id"]
         
-        update_data = {"verification_status": "VERIFIED", "evidence_strength": 0.9}
+        update_data = {"evidence_strength": 0.9}
         response = client.put(f"/api/students/skill-evidence/{evidence_id}",
                             data=json.dumps(update_data),
                             headers=auth_headers,
                             content_type="application/json")
         assert response.status_code == 200
         data = json.loads(response.data)
-        assert data["verification_status"] == "VERIFIED"
+        assert data["verification_status"] == "SELF_REPORTED"
         assert data["evidence_strength"] == 0.9
 
     def test_delete_skill_evidence(self, client, auth_headers, student_profile_id, skill_id):

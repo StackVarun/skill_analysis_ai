@@ -93,6 +93,9 @@ class SkillEvidenceService:
         )
 
         db.session.add(evidence)
+        db.session.flush()
+        from app.services.faculty_support_service import queue_review
+        queue_review(student_id, "EVIDENCE", evidence.id)
         db.session.commit()
         return evidence
 
@@ -136,10 +139,18 @@ class SkillEvidenceService:
             if not intern:
                 raise ValueError("Internship not found or not owned by student")
 
+        before = evidence.to_dict()
         for key, value in data.items():
             if hasattr(evidence, key) and key not in ("id", "student_id", "skill_id", "created_at"):
                 setattr(evidence, key, value)
 
+        after = evidence.to_dict()
+        if any(before[k] != after[k] for k in ("evidence_type", "evidence_title", "description", "source_url", "project_id", "certification_id", "experience_id", "internship_id", "evidence_strength", "verification_status")):
+            evidence.verification_status = VerificationStatus.SELF_REPORTED
+            from app.services.faculty_support_service import queue_review
+            queue_review(student_id, "EVIDENCE", evidence.id, reset=True)
+            if evidence.project and evidence.project.verification_request:
+                queue_review(student_id, "PROJECT", evidence.project_id, reset=True)
         db.session.commit()
         return evidence
 

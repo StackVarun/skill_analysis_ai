@@ -4,6 +4,7 @@ import { useAuth } from './context/AuthContext';
 import { api } from './services/api';
 import ProtectedRoute from './components/ProtectedRoute';
 import { StudentOpportunities, IndustryWorkspace } from './pages/OpportunityPages';
+import { StudentMentorship } from './pages/StudentMentorship';
 import { FacultyWorkspace, InstitutionWorkspace, SkillPassport } from './pages/AdditionalPages';
 import AuthPage from './pages/AuthPage';
 import { DashboardPage, ProfilePage, SkillsPage, AssessmentsPage, RolesPage, RecommendationsPage, AIStudioPage, PortfolioPage } from './pages/WorkspacePages';
@@ -19,6 +20,7 @@ const navigation = [
   { to: '/app/portfolio', label: 'Portfolio', icon: '▣' },
   { to: '/app/opportunities', label: 'Opportunities', icon: '↗' },
   { to: '/app/passport', label: 'Skill passport', icon: '◉' },
+  { to: '/app/mentorship', label: 'Mentorship & reviews', icon: '♧' },
 ];
 
 function AppShell() {
@@ -69,6 +71,7 @@ function App() {
       <Route path="roles" element={user?.role === 'STUDENT' ? <RolesPage/> : <Navigate to="/app"/>} /><Route path="recommendations" element={user?.role === 'STUDENT' ? <RecommendationsPage/> : <Navigate to="/app"/>} />
       <Route path="ai" element={user?.role === 'STUDENT' ? <AIStudioPage/> : <Navigate to="/app"/>} /><Route path="portfolio" element={user?.role === 'STUDENT' ? <PortfolioPage/> : <Navigate to="/app"/>} />
       <Route path="opportunities" element={user?.role === 'STUDENT' ? <StudentOpportunities/> : <Navigate to="/app"/>} /><Route path="passport" element={user?.role === 'STUDENT' ? <SkillPassport/> : <Navigate to="/app"/>} />
+      <Route path="mentorship" element={user?.role === 'STUDENT' ? <StudentMentorship/> : <Navigate to="/app"/>} />
     </Route></Route>
     <Route path="*" element={<Navigate to={user ? '/app' : '/login'} replace />} />
   </Routes>;

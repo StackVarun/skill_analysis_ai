@@ -122,19 +122,19 @@ flask db upgrade
 
 ```bash
 # Development
-flask run --port 5000 --debug
+flask run --port 5001 --debug
 
 # Or using run.py
 python run.py
 ```
 
-The server will start at `http://localhost:5000`
+The server will start at `http://localhost:5001`
 
 ## Testing the API
 
 ### Register a new user
 ```bash
-curl -X POST http://localhost:5000/api/auth/register \
+curl -X POST http://localhost:5001/api/auth/register \
   -H "Content-Type: application/json" \
   -d '{
     "email": "student@example.com",
@@ -147,7 +147,7 @@ curl -X POST http://localhost:5000/api/auth/register \
 
 ### Login
 ```bash
-curl -X POST http://localhost:5000/api/auth/login \
+curl -X POST http://localhost:5001/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "email": "student@example.com",
@@ -157,22 +157,22 @@ curl -X POST http://localhost:5000/api/auth/login \
 
 ### Get current user (protected)
 ```bash
-curl -X GET http://localhost:5000/api/auth/me \
+curl -X GET http://localhost:5001/api/auth/me \
   -H "Authorization: Bearer <your_access_token>"
 ```
 
 ### Test RBAC endpoints
 ```bash
 # Public endpoint
-curl http://localhost:5000/api/test/public
+curl http://localhost:5001/api/test/public
 
 # Protected endpoint (requires token)
 curl -H "Authorization: Bearer <your_access_token>" \
-  http://localhost:5000/api/test/protected
+  http://localhost:5001/api/test/protected
 
 # Role-specific endpoint
 curl -H "Authorization: Bearer <your_student_token>" \
-  http://localhost:5000/api/test/student-only
+  http://localhost:5001/api/test/student-only
 ```
 
 ## Database Migrations
@@ -288,7 +288,7 @@ with a future date):
   "employment_type": "FULL_TIME",
   "eligibility": "CSE students graduating in 2029",
   "deadline": "2027-06-30",
-  "stipend": "INR 15000/month",
+  "stipend": "INR 15001/month",
   "duration": "12 weeks",
   "required_skills": [
     {"skill_id": 1, "required_proficiency": 70, "weight": 2}

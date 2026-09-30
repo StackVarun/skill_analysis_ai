@@ -104,6 +104,7 @@ def register_blueprints(app):
     from app.routes.opportunity_routes import opportunity_bp
     from app.routes.faculty_routes import faculty_bp
     from app.routes.institution_routes import institution_bp
+    from app.routes.faculty_support_routes import support_bp
 
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
     app.register_blueprint(test_bp, url_prefix="/api/test")
@@ -121,3 +122,4 @@ def register_blueprints(app):
     app.register_blueprint(opportunity_bp, url_prefix="/api")
     app.register_blueprint(faculty_bp, url_prefix="/api")
     app.register_blueprint(institution_bp, url_prefix="/api")
+    app.register_blueprint(support_bp, url_prefix="/api")

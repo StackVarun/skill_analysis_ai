@@ -67,6 +67,9 @@ class SkillIntelligenceService:
         for qid, answer in submitted.items():
             attempt.answers.append(AssessmentAnswer(question_id=qid, answer=answer, is_correct=answer == expected[qid].correct_answer))
         db.session.add(attempt)
+        db.session.flush()
+        from app.services.faculty_support_service import queue_review
+        queue_review(student_id, "ASSESSMENT", attempt.id)
         db.session.commit()
         return attempt
 

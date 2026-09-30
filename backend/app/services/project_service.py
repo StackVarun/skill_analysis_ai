@@ -5,6 +5,15 @@ from app.models.project import Project
 from app.models.skill import Skill
 
 
+def catalog_skills(ids):
+    if len(ids) != len(set(ids)):
+        raise ValueError("Duplicate project skill")
+    skills = Skill.query.filter(Skill.id.in_(ids)).all()
+    if len(skills) != len(ids):
+        raise ValueError("Unknown project skill")
+    return skills
+
+
 class ProjectService:
     """Service layer for project operations."""
 
@@ -26,7 +35,7 @@ class ProjectService:
     @staticmethod
     def create_project(student_id: int, title: str, description: str = None,
                        technologies: str = None, project_url: str = None, github_url: str = None,
-                       start_date = None, end_date = None, role: str = None, skill_ids: list = None) -> Project:
+                       start_date = None, end_date = None, role: str = None, skill_ids: list = None, completion_status: str = "COMPLETED") -> Project:
         """Create a new project for a student."""
         # Verify student profile exists
         student = StudentProfile.query.filter_by(id=student_id).first()
@@ -42,15 +51,19 @@ class ProjectService:
             github_url=github_url,
             start_date=start_date,
             end_date=end_date,
-            role=role
+            role=role,
+            completion_status=completion_status
         )
 
         # Associate skills if provided
         if skill_ids:
-            skills = Skill.query.filter(Skill.id.in_(skill_ids)).all()
+            skills = catalog_skills(skill_ids)
             project.skills = skills
 
         db.session.add(project)
+        db.session.flush()
+        from app.services.faculty_support_service import project_changed
+        project_changed(project)
         db.session.commit()
         return project
 
@@ -61,14 +74,20 @@ class ProjectService:
         if not project:
             raise ValueError("Project not found")
 
+        selected_skills = catalog_skills(data["skill_ids"]) if "skill_ids" in data else None
+        before = project.to_dict()
         for key, value in data.items():
             if key == "skill_ids":
                 if value is not None:
-                    skills = Skill.query.filter(Skill.id.in_(value)).all()
-                    project.skills = skills
+                    project.skills = selected_skills
             elif hasattr(project, key) and key not in ("id", "student_id", "created_at"):
                 setattr(project, key, value)
 
+        db.session.flush()
+        after = project.to_dict()
+        if any(before[k] != after[k] for k in ("title", "description", "technologies", "project_url", "github_url", "start_date", "end_date", "role", "skills", "completion_status")):
+            from app.services.faculty_support_service import project_changed
+            project_changed(project)
         db.session.commit()
         return project
 

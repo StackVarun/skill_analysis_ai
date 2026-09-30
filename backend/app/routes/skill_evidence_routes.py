@@ -52,6 +52,9 @@ def create_student_skill_evidence():
     except ValidationError as err:
         return jsonify({"error": "Validation error", "messages": err.messages}), 400
 
+    if data.get("verification_status") == "VERIFIED":
+        return jsonify({"error": "Only faculty can verify evidence"}), 403
+
     try:
         evidence = SkillEvidenceService.create_evidence(
             student_id=profile.id,
@@ -116,6 +119,9 @@ def update_student_skill_evidence(evidence_id):
         data = skill_evidence_update_schema.load(request.get_json() or {})
     except ValidationError as err:
         return jsonify({"error": "Validation error", "messages": err.messages}), 400
+
+    if data.get("verification_status") == "VERIFIED":
+        return jsonify({"error": "Only faculty can verify evidence"}), 403
 
     try:
         evidence = SkillEvidenceService.update_evidence(evidence_id, profile.id, data)

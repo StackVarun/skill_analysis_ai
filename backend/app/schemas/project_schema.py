@@ -5,6 +5,7 @@ from marshmallow import Schema, fields, validate, validates, ValidationError
 class ProjectSchema(Schema):
     """Schema for project validation."""
     title = fields.Str(required=True, validate=validate.Length(min=1, max=200))
+    completion_status = fields.Str(load_default="COMPLETED", validate=validate.OneOf(["IN_PROGRESS", "COMPLETED"]))
     description = fields.Str(required=False, allow_none=True)
     technologies = fields.Str(required=False, allow_none=True)
     project_url = fields.Url(required=False, allow_none=True, validate=validate.Length(max=500))
@@ -23,6 +24,12 @@ class ProjectSchema(Schema):
 class ProjectUpdateSchema(Schema):
     """Schema for project update validation."""
     title = fields.Str(required=False, validate=validate.Length(min=1, max=200))
+    completion_status = fields.Str(validate=validate.OneOf(["IN_PROGRESS", "COMPLETED"]))
+
+    @validates("title")
+    def validate_title(self, value, **kwargs):
+        if not value.strip():
+            raise ValidationError("Project title is required")
     description = fields.Str(required=False, allow_none=True)
     technologies = fields.Str(required=False, allow_none=True)
     project_url = fields.Url(required=False, allow_none=True, validate=validate.Length(max=500))
@@ -36,6 +43,8 @@ class ProjectUpdateSchema(Schema):
 class ProjectResponseSchema(Schema):
     """Schema for project response serialization."""
     id = fields.Int(dump_only=True)
+    completion_status = fields.Str(dump_only=True)
+    verification_status = fields.Str(dump_only=True)
     student_id = fields.Int(dump_only=True)
     title = fields.Str(dump_only=True)
     description = fields.Str(dump_only=True)

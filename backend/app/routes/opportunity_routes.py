@@ -81,7 +81,9 @@ def my_applications():
 @roles_required('INDUSTRY')
 def applications(post_id):
     post = OpportunityService.own_post(post_id, get_current_user().id)
-    return jsonify([candidate_record(a) for a in post.applications])
+    candidates = [candidate_record(a) for a in post.applications]
+    candidates.sort(key=lambda item: (-item['match']['match_percentage'], item['id']))
+    return jsonify(candidates)
 
 
 @opportunity_bp.get('/applications/<int:application_id>')

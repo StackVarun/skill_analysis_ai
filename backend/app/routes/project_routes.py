@@ -63,7 +63,8 @@ def create_student_project():
             start_date=data.get("start_date"),
             end_date=data.get("end_date"),
             role=data.get("role"),
-            skill_ids=data.get("skill_ids", [])
+            skill_ids=data.get("skill_ids", []),
+            completion_status=data.get("completion_status", "COMPLETED")
         )
     except ValueError as e:
         return jsonify({"error": "Project creation failed", "message": str(e)}), 400

@@ -20,6 +20,7 @@ class Project(db.Model):
     start_date = db.Column(db.Date, nullable=True)
     end_date = db.Column(db.Date, nullable=True)
     role = db.Column(db.String(200), nullable=True)
+    completion_status = db.Column(db.String(20), nullable=False, default="COMPLETED", server_default="COMPLETED")
 
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
     updated_at = db.Column(
@@ -46,6 +47,8 @@ class Project(db.Model):
             "id": self.id,
             "student_id": self.student_id,
             "title": self.title,
+            "completion_status": self.completion_status,
+            "verification_status": self.verification_request.status if self.verification_request else "NOT_REQUESTED",
             "description": self.description,
             "technologies": self.technologies,
             "project_url": self.project_url,

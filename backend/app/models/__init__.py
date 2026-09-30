@@ -17,3 +17,4 @@ __all__ = ["UserRole", "User", "StudentProfile", "Skill", "StudentSkill", "Profi
 from app.models.opportunity import CompanyProfile, Opportunity, OpportunitySkill, OpportunityApplication
 from app.models.faculty import FacultyProfile, FacultyOpportunity, FacultyApplication
 from app.models.institution import InstitutionProfile
+from app.models.faculty_support import VerificationRequest, MentorshipTask
