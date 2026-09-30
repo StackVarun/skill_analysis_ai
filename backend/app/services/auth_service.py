@@ -2,6 +2,7 @@
 from app.extensions import db
 from app.models.user import User, UserRole
 from app.models.enums import UserRole as UserRoleEnum
+from app.models.student_profile import StudentProfile
 
 
 class AuthService:
@@ -29,6 +30,9 @@ class AuthService:
         )
 
         db.session.add(user)
+        db.session.flush()
+        if user.has_role("STUDENT"):
+            db.session.add(StudentProfile(user_id=user.id, full_name=user.full_name))
         db.session.commit()
         return user
 

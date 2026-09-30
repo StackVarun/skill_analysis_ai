@@ -91,9 +91,11 @@ def industry_auth_headers(app, industry_user_id):
 def student_profile_id(app, student_user_id):
     """Create a student profile and return ID."""
     with app.app_context():
-        profile = StudentProfile(user_id=student_user_id)
-        db.session.add(profile)
-        db.session.commit()
+        profile = StudentProfile.query.filter_by(user_id=student_user_id).first()
+        if profile is None:
+            profile = StudentProfile(user_id=student_user_id)
+            db.session.add(profile)
+            db.session.commit()
         return profile.id
 
 

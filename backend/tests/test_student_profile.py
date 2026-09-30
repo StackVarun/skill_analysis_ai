@@ -6,12 +6,12 @@ import json
 class TestStudentProfile:
     """Test student profile endpoints."""
 
-    def test_get_profile_not_found(self, client, auth_headers):
-        """Test getting profile when it doesn't exist."""
+    def test_get_profile_created_with_student_account(self, client, auth_headers):
+        """A registered student has the profile row required by student APIs."""
         response = client.get("/api/students/profile", headers=auth_headers)
-        assert response.status_code == 404
+        assert response.status_code == 200
         data = json.loads(response.data)
-        assert data["error"] == "Not found"
+        assert data["full_name"] == "Test Student"
 
     def test_create_profile(self, client, auth_headers, student_profile_id):
         """Test creating a student profile."""
